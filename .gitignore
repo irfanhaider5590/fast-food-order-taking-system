@@ -62,3 +62,5 @@ Thumbs.db
 # Application specific
 replay_pid*.log
 
+*.mp4
+screenshots/*.mp4
