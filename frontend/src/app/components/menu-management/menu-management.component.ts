@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { MenuService, MenuCategory, MenuItem, AddOn, Combo, MenuItemSize } from '../../services/menu.service';
+import { MenuService } from '../../services/menu.service';
+import { MenuCategory, MenuItem, AddOn, Combo, MenuItemSize, ComboItem } from '../../models/menu.models';
 import { ImageUploadService } from '../../services/image-upload.service';
 import { LoggerService } from '../../services/logger.service';
 
@@ -276,7 +277,7 @@ export class MenuManagementComponent implements OnInit {
     
     // Load sizes - ensure we have a proper array
     if (item?.sizes && Array.isArray(item.sizes) && item.sizes.length > 0) {
-      this.currentSizes = item.sizes.map(size => ({
+      this.currentSizes = item.sizes.map((size: MenuItemSize) => ({
         id: size.id,
         sizeCode: size.sizeCode || '',
         sizeNameEn: size.sizeNameEn || '',
@@ -291,7 +292,7 @@ export class MenuManagementComponent implements OnInit {
       this.logger.debug(`No sizes found for item ${item?.id}. Item sizes:`, item?.sizes);
     }
     
-    this.selectedAddOnIds = item?.availableAddOns?.map(a => a.id!) || [];
+    this.selectedAddOnIds = item?.availableAddOns?.map((a: AddOn) => a.id!) || [];
     this.menuItemImagePreview = null;
     this.menuItemImageFile = null;
     
@@ -605,7 +606,7 @@ export class MenuManagementComponent implements OnInit {
   openComboForm(combo?: Combo): void {
     this.showComboForm = true;
     this.editingCombo = combo || null;
-    this.comboItems = combo?.items?.map(item => ({
+    this.comboItems = combo?.items?.map((item: ComboItem) => ({
       menuItemId: item.menuItemId,
       quantity: item.quantity
     })) || [];
@@ -679,7 +680,7 @@ export class MenuManagementComponent implements OnInit {
     if (this.comboForm.valid && this.comboItems.length > 0) {
       const comboData: any = {
         ...this.comboForm.value,
-        items: this.comboItems.map(item => ({
+        items: this.comboItems.map((item: { menuItemId: number; quantity: number }) => ({
           menuItemId: item.menuItemId,
           quantity: item.quantity
         }))

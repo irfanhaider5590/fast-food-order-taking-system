@@ -1,0 +1,49 @@
+<div class="category-list-container">
+  <div class="list-header">
+    <h3>Categories</h3>
+    <button class="btn btn-primary" (click)="onAddNew()">
+      + Add Category
+    </button>
+  </div>
+
+  @if (categories.length === 0) {
+    <div class="empty-state">
+      <p>No categories found. Add your first category to get started.</p>
+    </div>
+  } @else {
+    <div class="category-grid">
+      @for (category of categories; track category.id) {
+        <div class="category-card">
+          @if (category.imageUrl) {
+            <img [src]="category.imageUrl" [alt]="category.nameEn" class="category-image" />
+          } @else {
+            <div class="category-image-placeholder">No Image</div>
+          }
+          
+          <div class="category-info">
+            <h4>{{ category.nameEn }}</h4>
+            @if (category.nameUr) {
+              <p class="urdu-text">{{ category.nameUr }}</p>
+            }
+            <div class="category-meta">
+              <span class="badge" [class.active]="category.isActive" [class.inactive]="!category.isActive">
+                {{ category.isActive ? 'Active' : 'Inactive' }}
+              </span>
+              <span class="order">Order: {{ category.displayOrder || 0 }}</span>
+            </div>
+          </div>
+
+          <div class="category-actions">
+            <button class="btn btn-sm btn-edit" (click)="onEdit(category)">
+              Edit
+            </button>
+            <button class="btn btn-sm btn-delete" (click)="onDelete(category.id!)">
+              Delete
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+

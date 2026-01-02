@@ -1,0 +1,32 @@
+<div class="image-upload-container">
+  <label class="image-upload-label">{{ label }}</label>
+  <div class="image-preview-container">
+    @if (previewUrl) {
+      <div class="image-preview-wrapper">
+        <img [src]="previewUrl" alt="Preview" class="preview-image" />
+        <button type="button" class="remove-btn" (click)="removeImage()" [disabled]="uploading">
+          ×
+        </button>
+      </div>
+    } @else {
+      <div class="upload-placeholder">
+        <input
+          type="file"
+          accept="image/*"
+          (change)="onFileSelected($event)"
+          [disabled]="uploading"
+          id="image-upload-{{ storageKey }}"
+          class="file-input"
+        />
+        <label for="image-upload-{{ storageKey }}" class="upload-label">
+          @if (uploading) {
+            <span>Uploading...</span>
+          } @else {
+            <span>+ Upload Image</span>
+          }
+        </label>
+      </div>
+    }
+  </div>
+</div>
+

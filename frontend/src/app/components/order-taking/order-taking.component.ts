@@ -1,7 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MenuService, MenuCategory, MenuItem, MenuItemSize } from '../../services/menu.service';
+import { MenuService } from '../../services/menu.service';
+import { MenuCategory, MenuItem, MenuItemSize } from '../../models/menu.models';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { LoggerService } from '../../services/logger.service';
@@ -118,7 +119,7 @@ export class OrderTakingComponent implements OnInit {
 
   addToCart(item: MenuItem) {
     // If item has sizes, show size selection modal
-    if (item.sizes && item.sizes.length > 0 && item.sizes.some(s => s.isAvailable)) {
+    if (item.sizes && item.sizes.length > 0 && item.sizes.some((s: MenuItemSize) => s.isAvailable)) {
       this.selectedItemForSize = item;
       return;
     }
@@ -160,7 +161,7 @@ export class OrderTakingComponent implements OnInit {
 
   getAvailableSizes(item: MenuItem): MenuItemSize[] {
     if (!item.sizes) return [];
-    return item.sizes.filter(s => s.isAvailable);
+    return item.sizes.filter((s: MenuItemSize) => s.isAvailable);
   }
 
   updateQuantity(index: number, change: number) {
