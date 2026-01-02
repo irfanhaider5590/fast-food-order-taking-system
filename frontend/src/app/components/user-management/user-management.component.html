@@ -1,0 +1,133 @@
+<div class="user-management-container">
+  <div class="header-section">
+    <h2>User Management</h2>
+    <button class="btn btn-primary" (click)="openAddUserForm()">+ Add New User</button>
+  </div>
+
+  @if (loading) {
+    <div class="loading-indicator">Loading users...</div>
+  } @else if (error) {
+    <div class="error-message">{{ error }}</div>
+  } @else {
+    <div class="users-table-container">
+    
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Branch</th>
+            <th>Status</th>
+            <th>Created By</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (users && users.length > 0) {
+            @for (user of users; track user.id || $index) {
+              <tr [class.inactive]="!user.isActive">
+                <td>{{ user.username }}</td>
+                <td>{{ user.fullName }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ getRoleName(user.roleId || 0) }}</td>
+                <td>{{ user.branchName || '-' }}</td>
+                <td>
+                  <span class="status-badge" [class.active]="user.isActive" [class.inactive]="!user.isActive">
+                    {{ user.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td>{{ user.createdByUsername || '-' }}</td>
+                <td class="actions-cell">
+                  <button class="btn btn-sm btn-edit" (click)="openEditForm(user)">Edit</button>
+                  <button class="btn btn-sm btn-toggle" (click)="toggleUserStatus(user)">
+                    {{ user.isActive ? 'Deactivate' : 'Activate' }}
+                  </button>
+                  <button class="btn btn-sm btn-delete" (click)="deleteUser(user)">Delete</button>
+                </td>
+              </tr>
+            }
+          } @else {
+            <tr>
+              <td colspan="8" class="empty-message">No users found</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- User Form Modal -->
+  @if (showUserForm) {
+    <div class="modal-overlay" (click)="closeForm()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>{{ editingUser ? 'Edit User' : 'Add New User' }}</h3>
+          <button class="modal-close" (click)="closeForm()">×</button>
+        </div>
+        <div class="modal-body">
+          <form (ngSubmit)="saveUser()">
+            <div class="form-group">
+              <label>Username *</label>
+              <input type="text" [(ngModel)]="userForm.username" name="username" required [readonly]="!!editingUser">
+            </div>
+            
+            <div class="form-group">
+              <label>Email *</label>
+              <input type="email" [(ngModel)]="userForm.email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+              <label>Password {{ editingUser ? '(leave blank to keep current)' : '*' }}</label>
+              <input type="password" [(ngModel)]="userForm.password" name="password" [required]="!editingUser">
+            </div>
+            
+            <div class="form-group">
+              <label>Full Name *</label>
+              <input type="text" [(ngModel)]="userForm.fullName" name="fullName" required>
+            </div>
+            
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="text" [(ngModel)]="userForm.phone" name="phone">
+            </div>
+            
+            <div class="form-group">
+              <label>Role *</label>
+              <select [(ngModel)]="userForm.roleId" name="roleId" required>
+                <option value="0">Select Role</option>
+                @for (role of roles; track role.id) {
+                  <option [value]="role.id">{{ role.name }} - {{ role.description }}</option>
+                }
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Branch</label>
+              <select [(ngModel)]="userForm.branchId" name="branchId">
+                <option [value]="undefined">No Branch</option>
+                @for (branch of branches; track branch.id) {
+                  <option [value]="branch.id">{{ branch.name }}</option>
+                }
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>
+                <input type="checkbox" [(ngModel)]="userForm.isActive" name="isActive">
+                Active
+              </label>
+            </div>
+            
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="closeForm()">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+

@@ -5,6 +5,8 @@ import { OrderTakingComponent } from './components/order-taking/order-taking.com
 import { AnalyticsComponent } from './components/analytics/analytics.component';
 import { MenuManagementComponent } from './components/menu-management/menu-management.component';
 import { OrderManagementComponent } from './components/order-management/order-management.component';
+import { UserManagementComponent } from './components/user-management/user-management.component';
+import { SettingsComponent } from './components/settings/settings.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -13,6 +15,8 @@ export const routes: Routes = [
   { path: 'orders', component: OrderTakingComponent },
   { path: 'order-management', component: OrderManagementComponent },
   { path: 'analytics', component: AnalyticsComponent },
-  { path: 'menu', component: MenuManagementComponent }
+  { path: 'menu', component: MenuManagementComponent },
+  { path: 'user-management', component: UserManagementComponent },
+  { path: 'settings', component: SettingsComponent }
 ];
 

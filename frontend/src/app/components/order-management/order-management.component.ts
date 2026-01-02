@@ -4,12 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { OrderService, OrderSearchParams, OrderSearchResponse } from '../../services/order.service';
 import { OrderResponse, OrderStatus } from '../../models/order.models';
 import { LoggerService } from '../../services/logger.service';
-import { NavigationComponent } from '../../shared/components/navigation/navigation.component';
 
 @Component({
   selector: 'app-order-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, NavigationComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './order-management.component.html',
   styleUrls: ['./order-management.component.css']
 })

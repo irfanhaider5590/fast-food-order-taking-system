@@ -12,6 +12,7 @@ import { Router, RouterModule } from '@angular/router';
 export class NavigationComponent {
   @Input() showBack: boolean = false;
   @Input() showHome: boolean = true;
+  @Input() showLogout: boolean = true;
   @Input() title: string = '';
 
   constructor(private router: Router) {}
@@ -22,6 +23,15 @@ export class NavigationComponent {
 
   goHome(): void {
     this.router.navigate(['/dashboard']);
+  }
+
+  logout(): void {
+    // Clear authentication tokens
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    
+    // Navigate to login page
+    this.router.navigate(['/login']);
   }
 }
 

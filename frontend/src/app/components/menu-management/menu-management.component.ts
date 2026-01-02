@@ -5,12 +5,11 @@ import { MenuService } from '../../services/menu.service';
 import { MenuCategory, MenuItem, AddOn, Combo, MenuItemSize, ComboItem } from '../../models/menu.models';
 import { ImageUploadService } from '../../services/image-upload.service';
 import { LoggerService } from '../../services/logger.service';
-import { NavigationComponent } from '../../shared/components/navigation/navigation.component';
 
 @Component({
   selector: 'app-menu-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, NavigationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './menu-management.component.html',
   styleUrls: ['./menu-management.component.css']
 })
