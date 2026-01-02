@@ -1,0 +1,24 @@
+<div class="navigation-bar">
+  <div class="nav-left">
+    @if (showBack) {
+      <button class="nav-btn nav-btn-back" (click)="goBack()" title="Go Back">
+        ← Back
+      </button>
+    }
+  </div>
+  
+  @if (title) {
+    <div class="nav-center">
+      <h2 class="nav-title">{{ title }}</h2>
+    </div>
+  }
+  
+  <div class="nav-right">
+    @if (showHome) {
+      <button class="nav-btn nav-btn-home" (click)="goHome()" title="Go to Dashboard">
+        🏠 Home
+      </button>
+    }
+  </div>
+</div>
+

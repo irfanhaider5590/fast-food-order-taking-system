@@ -3,13 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Chart, registerables } from 'chart.js';
 import { CommonModule } from '@angular/common';
 import { LoggerService } from '../../services/logger.service';
+import { NavigationComponent } from '../../shared/components/navigation/navigation.component';
 
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-analytics',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NavigationComponent],
   templateUrl: './analytics.component.html',
   styleUrls: ['./analytics.component.css']
 })

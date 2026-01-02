@@ -6,10 +6,16 @@ import com.fastfood.order.domain.entity.*;
 import com.fastfood.order.infrastructure.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -192,18 +198,161 @@ public class OrderService {
         });
     }
 
+    public List<OrderResponse> getAllOrders() {
+        log.info("Fetching pending orders from database");
+        try {
+            // Only fetch PENDING orders for recent orders screen
+            List<Order> orders = orderRepository.findByOrderStatusOrderByOrderDateDesc(Order.OrderStatus.PENDING);
+            log.info("Found {} pending orders in database", orders.size());
+            
+            List<OrderResponse> orderResponses = orders.stream()
+                    .map(this::mapToOrderResponse)
+                    .collect(Collectors.toList());
+            
+            log.debug("Mapped {} orders to response DTOs", orderResponses.size());
+            return orderResponses;
+        } catch (Exception e) {
+            log.error("Error fetching orders from database", e);
+            throw e;
+        }
+    }
+
+    @Transactional
+    public OrderResponse updateOrderStatus(Long orderId, Order.OrderStatus newStatus, Long userId) {
+        log.info("Updating order {} status to {}", orderId, newStatus);
+        
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+        
+        Order.OrderStatus oldStatus = order.getOrderStatus();
+        order.setOrderStatus(newStatus);
+        
+        // Set completedAt timestamp if status is COMPLETED
+        if (newStatus == Order.OrderStatus.COMPLETED && oldStatus != Order.OrderStatus.COMPLETED) {
+            order.setCompletedAt(LocalDateTime.now());
+        }
+        
+        Order updatedOrder = orderRepository.save(order);
+        log.info("Order {} status updated from {} to {}", orderId, oldStatus, newStatus);
+        
+        return mapToOrderResponse(updatedOrder);
+    }
+
+    public Page<OrderResponse> searchOrders(String orderNumber, String customerName, String customerPhone,
+                                           LocalDate startDate, LocalDate endDate, Long branchId, Pageable pageable) {
+        log.info("Searching orders with filters: orderNumber={}, customerName={}, customerPhone={}, startDate={}, endDate={}, branchId={}",
+                orderNumber, customerName, customerPhone, startDate, endDate, branchId);
+        
+        Specification<Order> spec = Specification.where(null);
+        boolean hasFilters = false;
+        
+        if (orderNumber != null && !orderNumber.isEmpty()) {
+            spec = spec.and((root, query, cb) -> 
+                cb.like(cb.lower(root.get("orderNumber")), "%" + orderNumber.toLowerCase() + "%"));
+            hasFilters = true;
+        }
+        
+        if (customerName != null && !customerName.isEmpty()) {
+            spec = spec.and((root, query, cb) -> 
+                cb.like(cb.lower(root.get("customerName")), "%" + customerName.toLowerCase() + "%"));
+            hasFilters = true;
+        }
+        
+        if (customerPhone != null && !customerPhone.isEmpty()) {
+            spec = spec.and((root, query, cb) -> 
+                cb.like(root.get("customerPhone"), "%" + customerPhone + "%"));
+            hasFilters = true;
+        }
+        
+        if (startDate != null) {
+            LocalDateTime startDateTime = startDate.atStartOfDay();
+            spec = spec.and((root, query, cb) -> 
+                cb.greaterThanOrEqualTo(root.get("orderDate"), startDateTime));
+            hasFilters = true;
+        }
+        
+        if (endDate != null) {
+            LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+            spec = spec.and((root, query, cb) -> 
+                cb.lessThanOrEqualTo(root.get("orderDate"), endDateTime));
+            hasFilters = true;
+        }
+        
+        if (branchId != null) {
+            spec = spec.and((root, query, cb) -> 
+                cb.equal(root.get("branch").get("id"), branchId));
+        }
+        
+        // Always sort by orderDate desc first
+        Sort sort = Sort.by(Sort.Order.desc("orderDate"));
+        Pageable finalPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
+        
+        Page<Order> orders = orderRepository.findAll(spec, finalPageable);
+        
+        // If no filters applied, sort results to put PENDING orders first, then by date desc
+        if (!hasFilters) {
+            List<OrderResponse> content = orders.getContent().stream()
+                    .map(this::mapToOrderResponse)
+                    .sorted((a, b) -> {
+                        // PENDING orders first
+                        boolean aIsPending = a.getOrderStatus() == Order.OrderStatus.PENDING;
+                        boolean bIsPending = b.getOrderStatus() == Order.OrderStatus.PENDING;
+                        if (aIsPending && !bIsPending) return -1;
+                        if (!aIsPending && bIsPending) return 1;
+                        // Then by date desc
+                        LocalDateTime dateA = a.getOrderDate() != null ? a.getOrderDate() : LocalDateTime.MIN;
+                        LocalDateTime dateB = b.getOrderDate() != null ? b.getOrderDate() : LocalDateTime.MIN;
+                        return dateB.compareTo(dateA);
+                    })
+                    .collect(Collectors.toList());
+            
+            return new org.springframework.data.domain.PageImpl<>(content, orders.getPageable(), orders.getTotalElements());
+        }
+        
+        return orders.map(this::mapToOrderResponse);
+    }
+
     private OrderResponse mapToOrderResponse(Order order) {
-        return OrderResponse.builder()
+        OrderResponse.OrderResponseBuilder builder = OrderResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
                 .branchId(order.getBranch().getId())
                 .branchName(order.getBranch().getName())
                 .orderType(order.getOrderType())
+                .tableNumber(order.getTableNumber())
+                .customerName(order.getCustomerName())
+                .customerPhone(order.getCustomerPhone())
+                .deliveryAddress(order.getDeliveryAddress())
+                .paymentMethod(order.getPaymentMethod())
                 .orderStatus(order.getOrderStatus())
                 .paymentStatus(order.getPaymentStatus())
+                .subtotal(order.getSubtotal())
+                .discountAmount(order.getDiscountAmount())
+                .voucherCode(order.getVoucherCode())
                 .totalAmount(order.getTotalAmount())
+                .notes(order.getNotes())
                 .orderDate(order.getOrderDate())
-                .build();
+                .completedAt(order.getCompletedAt());
+        
+        // Map order items
+        List<com.fastfood.order.application.dto.OrderItemResponse> itemResponses = orderItemRepository.findByOrderId(order.getId())
+                .stream()
+                .map(item -> com.fastfood.order.application.dto.OrderItemResponse.builder()
+                        .id(item.getId())
+                        .menuItemId(item.getMenuItem() != null ? item.getMenuItem().getId() : null)
+                        .comboId(item.getCombo() != null ? item.getCombo().getId() : null)
+                        .itemNameEn(item.getItemNameEn())
+                        .itemNameUr(item.getItemNameUr())
+                        .sizeCode(item.getSizeCode())
+                        .quantity(item.getQuantity())
+                        .unitPrice(item.getUnitPrice())
+                        .totalPrice(item.getTotalPrice())
+                        .notes(item.getNotes())
+                        .build())
+                .collect(Collectors.toList());
+        builder.items(itemResponses);
+        
+        return builder.build();
     }
 
     // Helper class for item details

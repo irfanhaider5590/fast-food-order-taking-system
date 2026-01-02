@@ -1,0 +1,51 @@
+<div class="order-list-container">
+  <div class="order-list-header">
+    <h3>Recent Orders</h3>
+    <button class="btn-refresh" (click)="loadOrders()" [disabled]="loading" title="Refresh">
+      <span *ngIf="!loading">↻</span>
+      <span *ngIf="loading">⟳</span>
+    </button>
+  </div>
+
+  @if (loading && orders.length === 0) {
+    <div class="loading-state">
+      <p>Loading orders...</p>
+    </div>
+  } @else if (error && orders.length === 0) {
+    <div class="error-state">
+      <p>{{ error }}</p>
+      <button class="btn-retry" (click)="loadOrders()">Retry</button>
+    </div>
+  } @else if (orders.length === 0) {
+    <div class="empty-state">
+      <p>No orders yet</p>
+      <p class="hint">Orders will appear here once placed</p>
+    </div>
+  } @else {
+    <div class="orders-list">
+      @for (order of orders; track order.id) {
+        <div class="order-item" [title]="order.orderNumber">
+          <div class="order-header">
+            <div class="order-number">#{{ order.orderNumber }}</div>
+            <div class="order-time">{{ formatDate(order.orderDate || order.createdAt) }}</div>
+          </div>
+          
+          <div class="order-customer">
+            <span class="customer-name">{{ order.customerName }}</span>
+            <span class="order-type-badge" [style.background-color]="getOrderTypeColor(order.orderType)">
+              {{ getOrderTypeLabel(order.orderType) }}
+            </span>
+          </div>
+          
+          <div class="order-footer">
+            <span class="order-amount">{{ order.totalAmount | currency:'PKR':'symbol':'1.0-0' }}</span>
+            <span class="order-status" [style.color]="getStatusColor(order.orderStatus || 'PENDING')">
+              {{ order.orderStatus || 'PENDING' }}
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
