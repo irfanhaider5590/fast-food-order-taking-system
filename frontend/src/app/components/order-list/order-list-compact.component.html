@@ -1,0 +1,69 @@
+<div class="order-list-compact-container">
+  <div class="order-list-header-compact">
+    <div class="header-left">
+      <h4>Recent Orders</h4>
+      @if (orders.length > 0) {
+        <span class="order-count-badge">{{ orders.length }}</span>
+      }
+    </div>
+    <div class="header-right">
+      <button class="btn-toggle" (click)="toggleFullList()" [title]="showFullList ? 'Show Less' : 'Show All'">
+        {{ showFullList ? '▲' : '▼' }}
+      </button>
+      <button class="btn-refresh-compact" (click)="loadOrders()" [disabled]="loading" title="Refresh">
+        <span *ngIf="!loading">↻</span>
+        <span *ngIf="loading">⟳</span>
+      </button>
+    </div>
+  </div>
+
+  @if (loading && orders.length === 0) {
+    <div class="loading-state-compact">
+      <span>Loading...</span>
+    </div>
+  } @else if (error && orders.length === 0) {
+    <div class="error-state-compact">
+      <span>{{ error }}</span>
+    </div>
+  } @else if (orders.length === 0) {
+    <div class="empty-state-compact">
+      <span>No orders yet</span>
+    </div>
+  } @else {
+    <div class="orders-list-compact" [class.expanded]="showFullList">
+      @for (order of (showFullList ? orders : orders.slice(0, 5)); track order.id) {
+        <div class="order-item-compact" [title]="order.orderNumber" (click)="onOrderClick(order)">
+          <div class="order-item-header-compact">
+            <span class="order-number-compact">#{{ order.orderNumber }}</span>
+            <span class="order-time-compact">{{ formatDate(order.orderDate || order.createdAt) }}</span>
+          </div>
+          
+          <div class="order-item-body-compact">
+            <span class="customer-name-compact">{{ order.customerName }}</span>
+            <div class="order-badges-compact">
+              <span class="order-type-badge-compact" [style.background-color]="getOrderTypeColor(order.orderType)">
+                {{ getOrderTypeLabel(order.orderType) }}
+              </span>
+              <span class="order-status-compact" [style.color]="getStatusColor(order.orderStatus || '')">
+                {{ order.orderStatus || 'PENDING' }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="order-item-footer-compact">
+            <span class="order-amount-compact">{{ order.totalAmount | currency:'PKR':'symbol':'1.0-0' }}</span>
+          </div>
+        </div>
+      }
+      
+      @if (!showFullList && orders.length > 5) {
+        <div class="show-more-indicator">
+          <button class="btn-show-more" (click)="toggleFullList()">
+            Show {{ orders.length - 5 }} more orders
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>
+

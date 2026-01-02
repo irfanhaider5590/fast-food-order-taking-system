@@ -1,0 +1,17 @@
+<div class="notification-container">
+  @for (notification of notifications; track notification.id) {
+    <div 
+      class="notification" 
+      [class]="getNotificationClass(notification.type)"
+      (click)="removeNotification(notification.id)">
+      <div class="notification-content">
+        <span class="notification-icon">{{ getNotificationIcon(notification.type) }}</span>
+        <span class="notification-message">{{ notification.message }}</span>
+      </div>
+      <button class="notification-close" (click)="removeNotification(notification.id); $event.stopPropagation()">
+        ×
+      </button>
+    </div>
+  }
+</div>
+

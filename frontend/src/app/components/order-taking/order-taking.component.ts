@@ -1,11 +1,15 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MenuService } from '../../services/menu.service';
 import { MenuCategory, MenuItem, MenuItemSize } from '../../models/menu.models';
-import { HttpClient } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
+import { OrderService } from '../../services/order.service';
+import { OrderResponse, OrderStatus } from '../../models/order.models';
 import { LoggerService } from '../../services/logger.service';
+import { NotificationService } from '../../services/notification.service';
+import { OrderListCompactComponent } from '../order-list/order-list-compact.component';
+import { NavigationComponent } from '../../shared/components/navigation/navigation.component';
 
 interface CartItem {
   menuItemId: number;
@@ -20,11 +24,11 @@ interface CartItem {
 @Component({
   selector: 'app-order-taking',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, OrderListCompactComponent, NavigationComponent],
   templateUrl: './order-taking.component.html',
   styleUrls: ['./order-taking.component.css']
 })
-export class OrderTakingComponent implements OnInit {
+export class OrderTakingComponent implements OnInit, AfterViewInit {
   
   menuCategories: MenuCategory[] = [];
   menuItems: MenuItem[] = [];
@@ -39,16 +43,43 @@ export class OrderTakingComponent implements OnInit {
   loadingCategories = false;
   loadingItems = false;
   selectedItemForSize: MenuItem | null = null;
+  
+  // Status update modal
+  selectedOrderForStatus: OrderResponse | null = null;
+  showStatusModal = false;
+  updatingStatus = false;
+  
+  // Available statuses
+  orderStatuses = Object.values(OrderStatus);
+
+  @ViewChild(OrderListCompactComponent, { static: false }) orderListComponent?: OrderListCompactComponent;
 
   constructor(
     private menuService: MenuService,
-    private http: HttpClient,
+    private orderService: OrderService,
     private cdr: ChangeDetectorRef,
-    private logger: LoggerService
+    private logger: LoggerService,
+    private router: Router,
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit() {
     this.loadMenuCategories();
+  }
+
+  ngAfterViewInit(): void {
+    // Ensure ViewChild is initialized
+    this.cdr.detectChanges();
+    this.logger.debug('OrderTakingComponent.ngAfterViewInit() - OrderListComponent available:', !!this.orderListComponent);
+    
+    // Double check after a small delay to ensure ViewChild is properly initialized
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      this.logger.debug('OrderTakingComponent.ngAfterViewInit() - After delay, OrderListComponent available:', !!this.orderListComponent);
+      if (this.orderListComponent) {
+        this.logger.info('OrderListComponent successfully initialized and ready');
+      }
+    }, 100);
   }
 
   loadMenuCategories() {
@@ -211,25 +242,169 @@ export class OrderTakingComponent implements OnInit {
       }))
     };
 
-    this.http.post<any>(`${environment.apiUrl}/orders`, orderData, {
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    }).subscribe({
+    this.orderService.createOrder(orderData).subscribe({
       next: (response) => {
-        alert(`Order placed successfully! Order Number: ${response.orderNumber}`);
-        this.cart = [];
-        this.customerName = '';
-        this.customerPhone = '';
-        this.customerAddress = '';
-        this.tableNumber = '';
-        this.voucherCode = '';
+        this.logger.info(`Order placed successfully: ${response.orderNumber}`);
+        
+        // Show success notification
+        this.notificationService.showSuccess(
+          `Order placed successfully! Order Number: ${response.orderNumber}`,
+          4000
+        );
+        
+        // Reset form first
+        this.resetOrderForm();
+        
+        // Refresh order list after a small delay to ensure backend has processed the order
+        setTimeout(() => {
+          this.logger.debug('Attempting to refresh order list after order placement');
+          this.cdr.detectChanges(); // Force change detection first
+          
+          if (this.orderListComponent) {
+            this.logger.debug('OrderListComponent found, calling loadOrders()');
+            this.orderListComponent.loadOrders();
+          } else {
+            this.logger.warn('OrderListComponent not found, trying again...');
+            // Try again after another small delay
+            setTimeout(() => {
+              this.cdr.detectChanges();
+              if (this.orderListComponent) {
+                this.logger.debug('OrderListComponent found on retry, calling loadOrders()');
+                this.orderListComponent.loadOrders();
+              } else {
+                this.logger.error('OrderListComponent still not found after retry');
+              }
+            }, 200);
+          }
+        }, 800); // Increased delay to ensure backend has saved the order
       },
       error: (err) => {
         this.logger.error('Error placing order:', err);
-        alert('Error placing order: ' + (err.error?.message || 'Unknown error'));
+        this.notificationService.showError(
+          'Error placing order: ' + (err.error?.message || 'Unknown error'),
+          5000
+        );
       }
     });
+  }
+
+  resetOrderForm(): void {
+    // Clear cart
+    this.cart = [];
+    
+    // Reset customer info
+    this.customerName = '';
+    this.customerPhone = '';
+    this.customerAddress = '';
+    this.tableNumber = '';
+    this.voucherCode = '';
+    
+    // Reset order type to default
+    this.orderType = 'TAKEAWAY';
+    
+    // Close any open modals
+    this.selectedItemForSize = null;
+    
+    this.logger.info('Order form reset');
+  }
+
+  onOrderClick(order: OrderResponse): void {
+    // Show status update modal instead of navigating
+    this.selectedOrderForStatus = order;
+    this.showStatusModal = true;
+    this.logger.info(`Order clicked: ${order.orderNumber}, current status: ${order.orderStatus}`);
+  }
+
+  updateOrderStatus(newStatus: OrderStatus): void {
+    if (!this.selectedOrderForStatus) return;
+    
+    const orderId = this.selectedOrderForStatus.id;
+    const orderNumber = this.selectedOrderForStatus.orderNumber;
+    
+    // Close modal immediately for better UX
+    this.showStatusModal = false;
+    this.selectedOrderForStatus = null;
+    this.updatingStatus = false;
+    
+    this.logger.info(`Updating order ${orderNumber} status to ${newStatus}`);
+    
+    // Update status in background
+    this.orderService.updateOrderStatus(orderId, newStatus).subscribe({
+      next: (updatedOrder) => {
+        this.logger.info(`Order ${updatedOrder.orderNumber} status updated successfully to ${newStatus}`);
+        
+        // Show success notification
+        this.notificationService.showSuccess(
+          `Order status updated to ${newStatus}`,
+          3000
+        );
+        
+        // Refresh order list after successful update
+        setTimeout(() => {
+          this.logger.debug('Attempting to refresh order list after status update');
+          this.cdr.detectChanges(); // Force change detection first
+          
+          if (this.orderListComponent) {
+            this.logger.debug('OrderListComponent found, calling loadOrders()');
+            this.orderListComponent.loadOrders();
+          } else {
+            this.logger.warn('OrderListComponent not found, trying again...');
+            // Try again after another small delay
+            setTimeout(() => {
+              this.cdr.detectChanges();
+              if (this.orderListComponent) {
+                this.logger.debug('OrderListComponent found on retry, calling loadOrders()');
+                this.orderListComponent.loadOrders();
+              } else {
+                this.logger.error('OrderListComponent still not found after retry');
+              }
+            }, 200);
+          }
+        }, 600); // Delay to ensure backend has processed the update
+      },
+      error: (err) => {
+        this.logger.error('Error updating order status:', err);
+        this.notificationService.showError(
+          `Failed to update order status: ${err?.message || 'Unknown error'}`,
+          4000
+        );
+        
+        // Refresh order list even on error to show current state
+        setTimeout(() => {
+          this.cdr.detectChanges();
+          if (this.orderListComponent) {
+            this.orderListComponent.loadOrders();
+          }
+        }, 600);
+      }
+    });
+  }
+
+  closeStatusModal(): void {
+    this.showStatusModal = false;
+    this.selectedOrderForStatus = null;
+    this.updatingStatus = false;
+  }
+
+  getStatusColor(status: OrderStatus): string {
+    const colors: { [key: string]: string } = {
+      'PENDING': '#ffc107',
+      'PREPARING': '#17a2b8',
+      'READY': '#007bff',
+      'COMPLETED': '#28a745',
+      'CANCELLED': '#dc3545'
+    };
+    return colors[status] || '#6c757d';
+  }
+
+  getStatusLabel(status: OrderStatus): string {
+    const labels: { [key: string]: string } = {
+      'PENDING': 'Pending',
+      'PREPARING': 'Preparing',
+      'READY': 'Ready',
+      'COMPLETED': 'Completed',
+      'CANCELLED': 'Cancelled'
+    };
+    return labels[status] || status;
   }
 }

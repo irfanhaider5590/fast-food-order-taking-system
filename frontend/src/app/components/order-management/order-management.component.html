@@ -1,0 +1,158 @@
+<div class="order-management-container">
+  <app-navigation [showBack]="true" [showHome]="true" title="Order Management"></app-navigation>
+
+  <div class="content-wrapper">
+    <!-- Filters Section -->
+    <div class="filters-section">
+      <h3>Search & Filter Orders</h3>
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label>Order Number</label>
+          <input type="text" [(ngModel)]="searchParams.orderNumber" placeholder="e.g., ORD-20260102">
+        </div>
+        
+        <div class="filter-group">
+          <label>Customer Name</label>
+          <input type="text" [(ngModel)]="searchParams.customerName" placeholder="Customer name">
+        </div>
+        
+        <div class="filter-group">
+          <label>Customer Phone</label>
+          <input type="text" [(ngModel)]="searchParams.customerPhone" placeholder="Phone number">
+        </div>
+        
+        <div class="filter-group">
+          <label>Start Date</label>
+          <input type="date" [(ngModel)]="searchParams.startDate">
+        </div>
+        
+        <div class="filter-group">
+          <label>End Date</label>
+          <input type="date" [(ngModel)]="searchParams.endDate">
+        </div>
+        
+        <div class="filter-actions">
+          <button class="btn btn-primary" (click)="onSearch()" [disabled]="loading">Search</button>
+          <button class="btn btn-secondary" (click)="onResetFilters()" [disabled]="loading">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="orders-section">
+      <div class="section-header">
+        <h3>Orders ({{ totalElements }} total)</h3>
+      </div>
+
+      @if (loading) {
+        <div class="loading-state">
+          <p>Loading orders...</p>
+        </div>
+      } @else if (error) {
+        <div class="error-state">
+          <p>{{ error }}</p>
+          <button class="btn btn-primary" (click)="loadOrders()">Retry</button>
+        </div>
+      } @else if (orders.length === 0) {
+        <div class="empty-state">
+          <p>No orders found</p>
+        </div>
+      } @else {
+        <div class="table-container">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>Order #</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Phone</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Amount</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (order of orders; track order.id) {
+                <tr (click)="onOrderClick(order)" class="order-row">
+                  <td class="order-number">{{ order.orderNumber }}</td>
+                  <td>{{ formatDate(order.orderDate) }}</td>
+                  <td>{{ order.customerName || '-' }}</td>
+                  <td>{{ order.customerPhone || '-' }}</td>
+                  <td>
+                    <span class="badge badge-type">{{ order.orderType }}</span>
+                  </td>
+                  <td>
+                    <span class="badge badge-status" [style.background-color]="getStatusColor(order.orderStatus)">
+                      {{ order.orderStatus }}
+                    </span>
+                  </td>
+                  <td class="amount">{{ order.totalAmount | currency:'PKR':'symbol':'1.0-0' }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-primary" (click)="onOrderClick(order); $event.stopPropagation()">
+                      Update Status
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (totalPages > 1) {
+          <div class="pagination">
+            <button class="btn btn-sm" (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 0">
+              Previous
+            </button>
+            <span class="page-info">
+              Page {{ currentPage + 1 }} of {{ totalPages }} ({{ totalElements }} total)
+            </span>
+            <button class="btn btn-sm" (click)="onPageChange(currentPage + 1)" [disabled]="currentPage >= totalPages - 1">
+              Next
+            </button>
+          </div>
+        }
+      }
+    </div>
+  </div>
+
+  <!-- Status Update Modal -->
+  @if (showStatusModal && selectedOrder) {
+    <div class="modal-overlay" (click)="closeStatusModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Update Order Status</h3>
+          <button class="modal-close" (click)="closeStatusModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="order-info">
+            <p><strong>Order Number:</strong> {{ selectedOrder.orderNumber }}</p>
+            <p><strong>Customer:</strong> {{ selectedOrder.customerName }}</p>
+            <p><strong>Current Status:</strong> 
+              <span class="badge badge-status" [style.background-color]="getStatusColor(selectedOrder.orderStatus)">
+                {{ selectedOrder.orderStatus }}
+              </span>
+            </p>
+          </div>
+          
+          <div class="form-group">
+            <label>New Status</label>
+            <select [(ngModel)]="newStatus" class="form-control">
+              @for (status of orderStatuses; track status) {
+                <option [value]="status">{{ status }}</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeStatusModal()">Cancel</button>
+          <button class="btn btn-primary" (click)="updateOrderStatus()" [disabled]="loading || newStatus === selectedOrder.orderStatus">
+            Update Status
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+

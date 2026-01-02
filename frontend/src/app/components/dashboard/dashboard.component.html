@@ -1,6 +1,7 @@
 <div class="container">
+  <app-navigation [showBack]="false" [showHome]="false" title="Dashboard"></app-navigation>
+  
   <div class="dashboard-header">
-    <h2>Dashboard</h2>
     <div class="user-info">
       <span>Welcome, {{ user?.fullName }}</span>
       <button class="btn btn-secondary" (click)="logout()">Logout</button>
@@ -11,6 +12,10 @@
     <div class="card dashboard-card" (click)="navigateTo('/orders')">
       <h3>Order Taking</h3>
       <p>Create and manage orders</p>
+    </div>
+    <div class="card dashboard-card" (click)="navigateTo('/order-management')">
+      <h3>Order Management</h3>
+      <p>Search, filter and update order status</p>
     </div>
     <div class="card dashboard-card" (click)="navigateTo('/analytics')">
       <h3>Analytics</h3>

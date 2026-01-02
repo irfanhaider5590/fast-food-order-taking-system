@@ -1,8 +1,6 @@
 <div class="order-taking-container">
-  <div class="header">
-    <h1>Order Taking</h1>
-    <p>Select items and place your order</p>
-  </div>
+  <!-- Navigation Bar -->
+  <app-navigation [showBack]="true" [showHome]="true" title="Order Taking"></app-navigation>
 
   <div class="order-layout">
     <!-- Menu Section -->
@@ -55,12 +53,19 @@
       </div>
     </div>
     
-    <!-- Cart Section -->
-    <div class="cart-section">
-      <div class="cart-header">
-        <h2>Order Summary</h2>
-        <span class="cart-count">{{ cart.length }} items</span>
-      </div>
+  <!-- Right Side Section -->
+  <div class="right-side-section">
+    <!-- Order List Compact -->
+    <div class="order-list-section">
+      <app-order-list-compact (orderClick)="onOrderClick($event)"></app-order-list-compact>
+    </div>
+      
+      <!-- Cart Section -->
+      <div class="cart-section">
+        <div class="cart-header">
+          <h2>Order Summary</h2>
+          <span class="cart-count">{{ cart.length }} items</span>
+        </div>
 
       <!-- Order Type Selector -->
       <div class="order-type-selector">
@@ -150,6 +155,7 @@
           Place Order
         </button>
       </div>
+      </div>
     </div>
   </div>
 
@@ -182,6 +188,73 @@
             <div class="size-price">{{ selectedItemForSize.basePrice | currency:'PKR':'symbol':'1.0-0' }}</div>
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Status Update Modal -->
+  <div class="modal-overlay" *ngIf="showStatusModal && selectedOrderForStatus" (click)="closeStatusModal()">
+    <div class="modal-content status-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Update Order Status</h3>
+        <button class="modal-close" (click)="closeStatusModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="order-info-modal">
+          <div class="order-info-row">
+            <span class="info-label">Order Number:</span>
+            <span class="info-value">{{ selectedOrderForStatus.orderNumber }}</span>
+          </div>
+          <div class="order-info-row">
+            <span class="info-label">Customer:</span>
+            <span class="info-value">{{ selectedOrderForStatus.customerName || '-' }}</span>
+          </div>
+          <div class="order-info-row">
+            <span class="info-label">Current Status:</span>
+            <span class="status-badge-current" [style.background-color]="getStatusColor(selectedOrderForStatus.orderStatus)">
+              {{ getStatusLabel(selectedOrderForStatus.orderStatus) }}
+            </span>
+          </div>
+          <div class="order-info-row">
+            <span class="info-label">Amount:</span>
+            <span class="info-value">{{ selectedOrderForStatus.totalAmount | currency:'PKR':'symbol':'1.0-0' }}</span>
+          </div>
+        </div>
+        
+        <div class="status-buttons-section">
+          <h4>Select New Status:</h4>
+          <div class="status-buttons-grid">
+            @for (status of orderStatuses; track status) {
+              <button 
+                class="status-button"
+                [style.background-color]="getStatusColor(status)"
+                [class.active]="selectedOrderForStatus.orderStatus === status"
+                [disabled]="updatingStatus || selectedOrderForStatus.orderStatus === status"
+                (click)="updateOrderStatus(status)">
+                <span class="status-icon">
+                  @if (status === 'PENDING') { ⏳ }
+                  @else if (status === 'PREPARING') { 🔄 }
+                  @else if (status === 'READY') { ✅ }
+                  @else if (status === 'COMPLETED') { ✔️ }
+                  @else if (status === 'CANCELLED') { ❌ }
+                </span>
+                <span class="status-text">{{ getStatusLabel(status) }}</span>
+                @if (selectedOrderForStatus.orderStatus === status) {
+                  <span class="current-indicator">Current</span>
+                }
+              </button>
+            }
+          </div>
+        </div>
+        
+        @if (updatingStatus) {
+          <div class="updating-indicator">
+            <span>Updating status...</span>
+          </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeStatusModal()" [disabled]="updatingStatus">Cancel</button>
       </div>
     </div>
   </div>
