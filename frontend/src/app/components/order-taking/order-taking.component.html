@@ -1,0 +1,188 @@
+<div class="order-taking-container">
+  <div class="header">
+    <h1>Order Taking</h1>
+    <p>Select items and place your order</p>
+  </div>
+
+  <div class="order-layout">
+    <!-- Menu Section -->
+    <div class="menu-section">
+      <!-- Category Tabs -->
+      <div class="category-tabs">
+        <div *ngIf="loadingCategories" class="loading-indicator">Loading categories...</div>
+        <button 
+          *ngFor="let category of menuCategories" 
+          class="category-tab"
+          [class.active]="selectedCategory?.id === category.id"
+          (click)="selectCategory(category)">
+          {{ category.nameEn }}
+        </button>
+        <div *ngIf="!loadingCategories && menuCategories.length === 0" class="no-categories">
+          No categories available
+        </div>
+      </div>
+      
+      <!-- Menu Items Grid -->
+      <div class="menu-items-grid">
+        <div *ngIf="loadingItems" class="loading-indicator">Loading items...</div>
+        <div 
+          *ngFor="let item of menuItems" 
+          class="menu-item-card"
+          (click)="addToCart(item)">
+          <div class="item-image">
+            <img [src]="getItemImage(item)" [alt]="item.nameEn" (error)="$event.target.src='https://via.placeholder.com/300x200?text=' + item.nameEn">
+          </div>
+          <div class="item-info">
+            <h3>{{ item.nameEn }}</h3>
+            <p class="item-description" *ngIf="item.descriptionEn">{{ item.descriptionEn }}</p>
+            <div class="item-footer">
+              <span class="item-price">{{ item.basePrice | currency:'PKR':'symbol':'1.0-0' }}</span>
+              <button class="btn-add" (click)="addToCart(item); $event.stopPropagation()">
+                <span>+</span>
+              </button>
+            </div>
+            <div class="item-badges" *ngIf="item.sizes && item.sizes.length > 0">
+              <span class="badge">Multiple Sizes</span>
+            </div>
+            <div class="item-badges" *ngIf="item.availableAddOns && item.availableAddOns.length > 0">
+              <span class="badge">Add-ons Available</span>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="!loadingItems && menuItems.length === 0 && selectedCategory" class="no-items">
+          <p>No items available in {{ selectedCategory.nameEn }} category</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Cart Section -->
+    <div class="cart-section">
+      <div class="cart-header">
+        <h2>Order Summary</h2>
+        <span class="cart-count">{{ cart.length }} items</span>
+      </div>
+
+      <!-- Order Type Selector -->
+      <div class="order-type-selector">
+        <label>Order Type:</label>
+        <select [(ngModel)]="orderType" class="form-control">
+          <option value="TAKEAWAY">Takeaway</option>
+          <option value="TABLE_PICKUP">Table Pickup</option>
+          <option value="HOME_DELIVERY">Home Delivery</option>
+        </select>
+      </div>
+      
+      <!-- Customer Info -->
+      <div class="customer-info">
+        <input 
+          type="text" 
+          placeholder="Customer Name (Optional)" 
+          [(ngModel)]="customerName"
+          class="form-control">
+        <input 
+          type="text" 
+          placeholder="Customer Phone (Optional)" 
+          [(ngModel)]="customerPhone"
+          class="form-control">
+        
+        <input 
+          *ngIf="orderType === 'HOME_DELIVERY'"
+          type="text" 
+          placeholder="Delivery Address *" 
+          [(ngModel)]="customerAddress"
+          class="form-control">
+        
+        <input 
+          *ngIf="orderType === 'TABLE_PICKUP'"
+          type="text" 
+          placeholder="Table Number *" 
+          [(ngModel)]="tableNumber"
+          class="form-control">
+      </div>
+      
+      <!-- Cart Items -->
+      <div class="cart-items">
+        <div *ngFor="let item of cart; let i = index" class="cart-item">
+          <div class="cart-item-info">
+            <span class="item-name">{{ item.itemName }}</span>
+            <span class="item-price">{{ item.price | currency:'PKR':'symbol':'1.0-0' }}</span>
+            <span *ngIf="item.selectedSizeCode" class="item-size">Size: {{ item.selectedSizeCode }}</span>
+          </div>
+          <div class="cart-item-actions">
+            <button class="btn-quantity" (click)="updateQuantity(i, -1)">-</button>
+            <span class="quantity">{{ item.quantity }}</span>
+            <button class="btn-quantity" (click)="updateQuantity(i, 1)">+</button>
+            <button class="btn-remove" (click)="removeFromCart(i)">×</button>
+          </div>
+          <div class="cart-item-total">
+            Total: {{ (item.price * item.quantity) | currency:'PKR':'symbol':'1.0-0' }}
+          </div>
+        </div>
+        <div *ngIf="cart.length === 0" class="empty-cart">
+          <p>Cart is empty</p>
+          <p class="hint">Click on items to add them to cart</p>
+        </div>
+      </div>
+      
+      <!-- Voucher Section -->
+      <div class="voucher-section">
+        <input 
+          type="text" 
+          placeholder="Voucher Code (Optional)" 
+          [(ngModel)]="voucherCode"
+          class="form-control">
+      </div>
+      
+      <!-- Total Section -->
+      <div class="total-section">
+        <div class="total-row">
+          <span>Subtotal:</span>
+          <span>{{ getTotal() | currency:'PKR':'symbol':'1.0-0' }}</span>
+        </div>
+        <div class="total-row grand-total">
+          <span>Total:</span>
+          <span>{{ getTotal() | currency:'PKR':'symbol':'1.0-0' }}</span>
+        </div>
+        <button 
+          class="btn btn-primary btn-place-order" 
+          (click)="placeOrder()" 
+          [disabled]="cart.length === 0">
+          Place Order
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Size Selection Modal -->
+  <div class="modal-overlay" *ngIf="selectedItemForSize" (click)="closeSizeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Select Size - {{ selectedItemForSize.nameEn }}</h3>
+        <button class="modal-close" (click)="closeSizeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="size-options">
+          <button 
+            *ngFor="let size of getAvailableSizes(selectedItemForSize)" 
+            class="size-option"
+            (click)="addItemToCart(selectedItemForSize, size)">
+            <div class="size-name">{{ size.sizeNameEn }}</div>
+            <div class="size-code">{{ size.sizeCode }}</div>
+            <div class="size-price">
+              {{ (selectedItemForSize.basePrice + (size.priceModifier || 0)) | currency:'PKR':'symbol':'1.0-0' }}
+            </div>
+            <div *ngIf="size.priceModifier && size.priceModifier > 0" class="size-modifier">
+              +{{ size.priceModifier | currency:'PKR':'symbol':'1.0-0' }}
+            </div>
+          </button>
+          <button 
+            class="size-option no-size"
+            (click)="addItemToCart(selectedItemForSize, null)">
+            <div class="size-name">Regular</div>
+            <div class="size-price">{{ selectedItemForSize.basePrice | currency:'PKR':'symbol':'1.0-0' }}</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

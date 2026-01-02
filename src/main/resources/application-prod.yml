@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+  
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    com.fastfood.order: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+

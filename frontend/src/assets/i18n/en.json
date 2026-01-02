@@ -1,0 +1,25 @@
+{
+  "APP": {
+    "TITLE": "Fast Food Order System"
+  },
+  "LOGIN": {
+    "TITLE": "Login",
+    "USERNAME": "Username",
+    "PASSWORD": "Password",
+    "SUBMIT": "Login"
+  },
+  "DASHBOARD": {
+    "TITLE": "Dashboard",
+    "ORDERS": "Orders",
+    "ANALYTICS": "Analytics",
+    "MENU": "Menu Management"
+  },
+  "ANALYTICS": {
+    "TITLE": "Sales Analytics",
+    "CURRENT_MONTH": "Current Month",
+    "LAST_3_MONTHS": "Last 3 Months",
+    "LAST_12_MONTHS": "Last 12 Months",
+    "ORDERS": "Orders"
+  }
+}
+

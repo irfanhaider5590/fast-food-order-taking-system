@@ -1,0 +1,19 @@
+<div class="app-container">
+  <header class="app-header">
+    <div class="container">
+      <div class="header-content">
+        <h1>{{ 'APP.TITLE' | translate }}</h1>
+        <div class="header-actions">
+          <button class="btn btn-secondary" (click)="switchLanguage('en')">English</button>
+          <button class="btn btn-secondary" (click)="switchLanguage('ur')">اردو</button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main class="app-main">
+    <div class="container">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+</div>
+

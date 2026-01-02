@@ -1,0 +1,25 @@
+{
+  "APP": {
+    "TITLE": "فاسٹ فوڈ آرڈر سسٹم"
+  },
+  "LOGIN": {
+    "TITLE": "لاگ ان",
+    "USERNAME": "صارف نام",
+    "PASSWORD": "پاس ورڈ",
+    "SUBMIT": "لاگ ان"
+  },
+  "DASHBOARD": {
+    "TITLE": "ڈیش بورڈ",
+    "ORDERS": "آرڈرز",
+    "ANALYTICS": "تجزیات",
+    "MENU": "مینو مینجمنٹ"
+  },
+  "ANALYTICS": {
+    "TITLE": "سیلز تجزیات",
+    "CURRENT_MONTH": "موجودہ مہینہ",
+    "LAST_3_MONTHS": "آخری 3 ماہ",
+    "LAST_12_MONTHS": "آخری 12 ماہ",
+    "ORDERS": "آرڈرز"
+  }
+}
+

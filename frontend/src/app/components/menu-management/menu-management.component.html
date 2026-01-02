@@ -1,0 +1,489 @@
+<div class="menu-management-container">
+  <div class="header">
+    <h1>Menu Management</h1>
+    <p>Manage categories, menu items, add-ons, and combos</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'categories'"
+      (click)="setTab('categories')">
+      Categories
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'items'"
+      (click)="setTab('items')">
+      Menu Items
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'addons'"
+      (click)="setTab('addons')">
+      Add-ons
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'combos'"
+      (click)="setTab('combos')">
+      Combos
+    </button>
+  </div>
+
+  <!-- Categories Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'categories'">
+    <div class="section-header">
+      <h2>Menu Categories</h2>
+      <button class="btn btn-primary" (click)="openCategoryForm()">+ Add Category</button>
+    </div>
+
+    <!-- Category Form -->
+    <div class="form-card" *ngIf="showCategoryForm">
+      <h3>{{ editingCategory ? 'Edit Category' : 'New Category' }}</h3>
+      <form [formGroup]="categoryForm" (ngSubmit)="saveCategory()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name (English) *</label>
+            <input type="text" formControlName="nameEn" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Name (Urdu)</label>
+            <input type="text" formControlName="nameUr" class="form-control">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Description (English)</label>
+            <textarea formControlName="descriptionEn" class="form-control" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Description (Urdu)</label>
+            <textarea formControlName="descriptionUr" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Image</label>
+            <input 
+              type="file" 
+              accept="image/*" 
+              (change)="onCategoryImageSelected($event)"
+              class="form-control"
+              [disabled]="uploadingImage">
+            <div *ngIf="uploadingImage" class="upload-status">Compressing image...</div>
+            <div *ngIf="categoryImagePreview" class="image-preview-container">
+              <img [src]="categoryImagePreview" alt="Preview" class="image-preview">
+              <button type="button" class="btn-remove-image" (click)="removeCategoryImage()">Remove</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Display Order</label>
+            <input type="number" formControlName="displayOrder" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" formControlName="isActive"> Active
+            </label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="categoryForm.invalid">Save</button>
+          <button type="button" class="btn btn-secondary" (click)="showCategoryForm = false; editingCategory = null; categoryForm.reset()">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Categories List -->
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name (EN)</th>
+            <th>Name (UR)</th>
+            <th>Display Order</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let category of categories">
+            <td>{{ category.id }}</td>
+            <td>{{ category.nameEn }}</td>
+            <td>{{ category.nameUr || '-' }}</td>
+            <td>{{ category.displayOrder }}</td>
+            <td>
+              <span class="badge" [class.active]="category.isActive" [class.inactive]="!category.isActive">
+                {{ category.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-edit" (click)="openCategoryForm(category)">Edit</button>
+              <button class="btn btn-sm btn-delete" (click)="deleteCategory(category.id!)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Menu Items Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'items'">
+    <div class="section-header">
+      <h2>Menu Items</h2>
+      <button class="btn btn-primary" (click)="openMenuItemForm()">+ Add Menu Item</button>
+    </div>
+
+    <!-- Menu Item Form -->
+    <div class="form-card" *ngIf="showMenuItemForm">
+      <h3>{{ editingMenuItem ? 'Edit Menu Item' : 'New Menu Item' }}</h3>
+      <form [formGroup]="menuItemForm" (ngSubmit)="saveMenuItem()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category *</label>
+            <select formControlName="categoryId" class="form-control">
+              <option value="">Select Category</option>
+              <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.nameEn }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Name (English) *</label>
+            <input type="text" formControlName="nameEn" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Name (Urdu)</label>
+            <input type="text" formControlName="nameUr" class="form-control">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Base Price *</label>
+            <input type="number" formControlName="basePrice" class="form-control" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label>Image</label>
+            <input 
+              type="file" 
+              accept="image/*" 
+              (change)="onMenuItemImageSelected($event)"
+              class="form-control"
+              [disabled]="uploadingImage">
+            <div *ngIf="uploadingImage" class="upload-status">Compressing image...</div>
+            <div *ngIf="menuItemImagePreview" class="image-preview-container">
+              <img [src]="menuItemImagePreview" alt="Preview" class="image-preview">
+              <button type="button" class="btn-remove-image" (click)="removeMenuItemImage()">Remove</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Display Order</label>
+            <input type="number" formControlName="displayOrder" class="form-control">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>
+              <input type="checkbox" formControlName="isAvailable"> Available
+            </label>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" formControlName="isCombo"> Is Combo
+            </label>
+          </div>
+        </div>
+
+        <!-- Sizes Section -->
+        <div class="sizes-section">
+          <div class="section-title">
+            <h4>Sizes</h4>
+            <button type="button" class="btn btn-sm btn-secondary" (click)="addSize()">+ Add Size</button>
+          </div>
+          <div class="sizes-list" *ngIf="currentSizes.length > 0">
+            <div class="size-item" *ngFor="let size of currentSizes; let i = index; trackBy: trackBySizeIndex">
+              <input 
+                type="text" 
+                [value]="size.sizeCode" 
+                (input)="updateSizeField(i, 'sizeCode', $any($event.target).value)"
+                placeholder="Code (S/M/L) *" 
+                class="form-control-sm"
+                required
+                maxlength="10">
+              <input 
+                type="text" 
+                [value]="size.sizeNameEn" 
+                (input)="updateSizeField(i, 'sizeNameEn', $any($event.target).value)"
+                placeholder="Name (EN) *" 
+                class="form-control-sm"
+                required
+                maxlength="50">
+              <input 
+                type="text" 
+                [value]="size.sizeNameUr" 
+                (input)="updateSizeField(i, 'sizeNameUr', $any($event.target).value)"
+                placeholder="Name (UR)" 
+                class="form-control-sm"
+                maxlength="50">
+              <input 
+                type="number" 
+                [value]="size.priceModifier" 
+                (input)="updateSizeField(i, 'priceModifier', $any($event.target).value)"
+                placeholder="Price Modifier" 
+                step="0.01" 
+                class="form-control-sm">
+              <button type="button" class="btn btn-sm btn-delete" (click)="removeSize(i)">Remove</button>
+            </div>
+            <p class="hint-text" *ngIf="currentSizes.length > 0">
+              <small>Note: Sizes with empty Code or Name will be ignored when saving.</small>
+            </p>
+          </div>
+        </div>
+
+        <!-- Add-ons Section -->
+        <div class="addons-section">
+          <div class="section-title">
+            <h4>Available Add-ons</h4>
+          </div>
+          <div class="addons-list">
+            <label *ngFor="let addOn of addOns" class="checkbox-label">
+              <input type="checkbox" 
+                     [checked]="selectedAddOnIds.includes(addOn.id!)"
+                     (change)="toggleAddOn(addOn.id!)">
+              {{ addOn.nameEn }} ({{ addOn.price | currency }})
+            </label>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="menuItemForm.invalid">Save</button>
+          <button type="button" class="btn btn-secondary" (click)="showMenuItemForm = false; editingMenuItem = null; menuItemForm.reset(); currentSizes = []; selectedAddOnIds = []">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Menu Items List -->
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Sizes</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of menuItems">
+            <td>{{ item.id }}</td>
+            <td>{{ item.nameEn }}</td>
+            <td>{{ item.categoryName }}</td>
+            <td>{{ item.basePrice | currency }}</td>
+            <td>{{ item.sizes?.length || 0 }}</td>
+            <td>
+              <span class="badge" [class.active]="item.isAvailable" [class.inactive]="!item.isAvailable">
+                {{ item.isAvailable ? 'Available' : 'Unavailable' }}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-edit" (click)="openMenuItemForm(item)">Edit</button>
+              <button class="btn btn-sm btn-delete" (click)="deleteMenuItem(item.id!)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Add-ons Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'addons'">
+    <div class="section-header">
+      <h2>Add-ons</h2>
+      <button class="btn btn-primary" (click)="openAddOnForm()">+ Add Add-on</button>
+    </div>
+
+    <!-- Add-on Form -->
+    <div class="form-card" *ngIf="showAddOnFormFlag">
+      <h3>{{ editingAddOn ? 'Edit Add-on' : 'New Add-on' }}</h3>
+      <form [formGroup]="addOnForm" (ngSubmit)="saveAddOn()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name (English) *</label>
+            <input type="text" formControlName="nameEn" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Name (Urdu)</label>
+            <input type="text" formControlName="nameUr" class="form-control">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Price *</label>
+            <input type="number" formControlName="price" class="form-control" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label>Display Order</label>
+            <input type="number" formControlName="displayOrder" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" formControlName="isAvailable"> Available
+            </label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="addOnForm.invalid">Save</button>
+          <button type="button" class="btn btn-secondary" (click)="showAddOnFormFlag = false; editingAddOn = null; addOnForm.reset()">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Add-ons List -->
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name (EN)</th>
+            <th>Name (UR)</th>
+            <th>Price</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let addOn of addOns">
+            <td>{{ addOn.id }}</td>
+            <td>{{ addOn.nameEn }}</td>
+            <td>{{ addOn.nameUr || '-' }}</td>
+            <td>{{ addOn.price | currency }}</td>
+            <td>
+              <span class="badge" [class.active]="addOn.isAvailable" [class.inactive]="!addOn.isAvailable">
+                {{ addOn.isAvailable ? 'Available' : 'Unavailable' }}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-edit" (click)="openAddOnForm(addOn)">Edit</button>
+              <button class="btn btn-sm btn-delete" (click)="deleteAddOn(addOn.id!)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Combos Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'combos'">
+    <div class="section-header">
+      <h2>Combos</h2>
+      <button class="btn btn-primary" (click)="openComboForm()">+ Add Combo</button>
+    </div>
+
+    <!-- Combo Form -->
+    <div class="form-card" *ngIf="showComboForm">
+      <h3>{{ editingCombo ? 'Edit Combo' : 'New Combo' }}</h3>
+      <form [formGroup]="comboForm" (ngSubmit)="saveCombo()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name (English) *</label>
+            <input type="text" formControlName="nameEn" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Name (Urdu)</label>
+            <input type="text" formControlName="nameUr" class="form-control">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Combo Price *</label>
+            <input type="number" formControlName="comboPrice" class="form-control" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label>Image</label>
+            <input 
+              type="file" 
+              accept="image/*" 
+              (change)="onComboImageSelected($event)"
+              class="form-control"
+              [disabled]="uploadingImage">
+            <div *ngIf="uploadingImage" class="upload-status">Compressing image...</div>
+            <div *ngIf="comboImagePreview" class="image-preview-container">
+              <img [src]="comboImagePreview" alt="Preview" class="image-preview">
+              <button type="button" class="btn-remove-image" (click)="removeComboImage()">Remove</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Display Order</label>
+            <input type="number" formControlName="displayOrder" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" formControlName="isAvailable"> Available
+          </label>
+        </div>
+
+        <!-- Combo Items Section -->
+        <div class="combo-items-section">
+          <div class="section-title">
+            <h4>Combo Items</h4>
+            <button type="button" class="btn btn-sm btn-secondary" (click)="addComboItem()">+ Add Item</button>
+          </div>
+          <div class="combo-items-list" *ngIf="comboItems.length > 0">
+            <div class="combo-item" *ngFor="let item of comboItems; let i = index">
+              <select [(ngModel)]="item.menuItemId" class="form-control-sm">
+                <option value="0">Select Menu Item</option>
+                <option *ngFor="let menuItem of availableMenuItems" [value]="menuItem.id">
+                  {{ menuItem.nameEn }}
+                </option>
+              </select>
+              <input type="number" [(ngModel)]="item.quantity" placeholder="Quantity" min="1" class="form-control-sm">
+              <button type="button" class="btn btn-sm btn-delete" (click)="removeComboItem(i)">Remove</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="comboForm.invalid || comboItems.length === 0">Save</button>
+          <button type="button" class="btn btn-secondary" (click)="showComboForm = false; editingCombo = null; comboForm.reset(); comboItems = []">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Combos List -->
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Items</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let combo of combos">
+            <td>{{ combo.id }}</td>
+            <td>{{ combo.nameEn }}</td>
+            <td>{{ combo.comboPrice | currency }}</td>
+            <td>{{ combo.items?.length || 0 }} items</td>
+            <td>
+              <span class="badge" [class.active]="combo.isAvailable" [class.inactive]="!combo.isAvailable">
+                {{ combo.isAvailable ? 'Available' : 'Unavailable' }}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-edit" (click)="openComboForm(combo)">Edit</button>
+              <button class="btn btn-sm btn-delete" (click)="deleteCombo(combo.id!)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

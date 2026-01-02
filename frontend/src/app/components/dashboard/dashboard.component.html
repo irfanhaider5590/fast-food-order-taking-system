@@ -1,0 +1,25 @@
+<div class="container">
+  <div class="dashboard-header">
+    <h2>Dashboard</h2>
+    <div class="user-info">
+      <span>Welcome, {{ user?.fullName }}</span>
+      <button class="btn btn-secondary" (click)="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <div class="card dashboard-card" (click)="navigateTo('/orders')">
+      <h3>Order Taking</h3>
+      <p>Create and manage orders</p>
+    </div>
+    <div class="card dashboard-card" (click)="navigateTo('/analytics')">
+      <h3>Analytics</h3>
+      <p>View sales analytics and reports</p>
+    </div>
+    <div class="card dashboard-card" (click)="navigateTo('/menu')">
+      <h3>Menu Management</h3>
+      <p>Manage menu items and categories</p>
+    </div>
+  </div>
+</div>
+

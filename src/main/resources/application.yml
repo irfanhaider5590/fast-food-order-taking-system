@@ -1,0 +1,100 @@
+server:
+  port: 8080
+  forward-headers-strategy: native
+  servlet:
+    context-path: /fast-food-order-api
+  error:
+    include-message: always
+  compression:
+    enabled: true
+    min-response-size: 10KB
+  shutdown: graceful
+  tomcat:
+    max-threads: 400
+    min-spare-threads: 100
+    max-connections: 20000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+spring:
+  application:
+    name: Fast-Food-Order-API
+  
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/fast-food}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:change-me}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: ${HIKARI_MIN_IDLE:10}
+      maximum-pool-size: ${HIKARI_MAX_POOL_SIZE:20}
+      max-lifetime: ${HIKARI_MAX_LIFETIME_MS:900000}
+      connection-timeout: ${HIKARI_CONNECTION_TIMEOUT_MS:150000}
+      idle-timeout: ${HIKARI_IDLE_TIMEOUT_MS:30000}
+      leak-detection-threshold: ${HIKARI_LEAK_DETECTION_THRESHOLD_MS:60000}
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        use_sql_comments: false
+    packages-to-scan: com.fastfood.order.domain.entity
+
+  sql:
+    init:
+      mode: never
+
+# Security Configuration
+security:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY:change-me-generate-strong-secret-key}
+    expiration: ${JWT_EXPIRATION:86400000} # 24 hours
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days
+  api:
+    key: ${API_KEY:change-me-generate-strong-api-key}
+  enable-csrf: false
+
+# Application Configuration
+app:
+  brand:
+    name: ${BRAND_NAME:Fast Food Express}
+    location: ${BRAND_LOCATION:Gujranwala, Pakistan}
+  order:
+    default-branch-id: ${DEFAULT_BRANCH_ID:1}
+  delivery:
+    charge-included: true
+  franchise:
+    inquiry-enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.fastfood.order: ${LOG_LEVEL:INFO}
+    org.springframework.security: ${SECURITY_LOG_LEVEL:WARN}
+    org.hibernate.SQL: OFF
+    org.hibernate.type.descriptor.sql.BasicBinder: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+    org.hibernate: OFF
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/fast-food-order-api.log
+    max-size: 10MB
+    max-history: 30
+
