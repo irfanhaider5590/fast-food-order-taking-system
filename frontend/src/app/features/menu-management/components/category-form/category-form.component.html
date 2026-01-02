@@ -1,0 +1,63 @@
+<div class="category-form-container">
+  <h3>{{ category ? 'Edit Category' : 'Add New Category' }}</h3>
+  
+  <form [formGroup]="categoryForm" (ngSubmit)="save()">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Name (English) *</label>
+        <input type="text" formControlName="nameEn" class="form-control" />
+      </div>
+      
+      <div class="form-group">
+        <label>Name (Urdu)</label>
+        <input type="text" formControlName="nameUr" class="form-control" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Description (English)</label>
+        <textarea formControlName="descriptionEn" class="form-control" rows="3"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Description (Urdu)</label>
+        <textarea formControlName="descriptionUr" class="form-control" rows="3"></textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Display Order</label>
+        <input type="number" formControlName="displayOrder" class="form-control" />
+      </div>
+      
+      <div class="form-group">
+        <label>
+          <input type="checkbox" formControlName="isActive" />
+          Active
+        </label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <app-image-upload
+        [previewUrl]="imagePreview"
+        storageKey="category"
+        label="Category Image"
+        (imageSelected)="onImageSelected($event)"
+        (imageRemoved)="onImageRemoved()">
+      </app-image-upload>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn btn-secondary" (click)="cancel()" [disabled]="saving">
+        Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="saving || categoryForm.invalid">
+        {{ saving ? 'Saving...' : (category ? 'Update' : 'Create') }}
+      </button>
+    </div>
+  </form>
+</div>
+

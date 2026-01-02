@@ -1,0 +1,72 @@
+<div class="menu-management-container">
+  <h2>Menu Management</h2>
+
+  <!-- Tabs Navigation -->
+  <div class="tabs">
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'categories'"
+      (click)="setTab('categories')">
+      Categories
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'items'"
+      (click)="setTab('items')">
+      Menu Items
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'addons'"
+      (click)="setTab('addons')">
+      Add-ons
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'combos'"
+      (click)="setTab('combos')">
+      Combos
+    </button>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    @if (activeTab === 'categories') {
+      @if (showCategoryForm) {
+        <app-category-form
+          [category]="editingCategory"
+          (saved)="onCategorySaved()"
+          (cancelled)="onCategoryCancelled()">
+        </app-category-form>
+      } @else {
+        <app-category-list
+          (edit)="onCategoryEdit($event)"
+          (delete)="onCategoryRefresh()"
+          (refresh)="onCategoryRefresh()">
+        </app-category-list>
+      }
+    }
+
+    @if (activeTab === 'items') {
+      <div class="coming-soon">
+        <p>Menu Items management - To be refactored similarly</p>
+        <!-- TODO: Create menu-item-list and menu-item-form components -->
+      </div>
+    }
+
+    @if (activeTab === 'addons') {
+      <div class="coming-soon">
+        <p>Add-ons management - To be refactored similarly</p>
+        <!-- TODO: Create addon-list and addon-form components -->
+      </div>
+    }
+
+    @if (activeTab === 'combos') {
+      <div class="coming-soon">
+        <p>Combos management - To be refactored similarly</p>
+        <!-- TODO: Create combo-list and combo-form components -->
+      </div>
+    }
+  </div>
+</div>
+
