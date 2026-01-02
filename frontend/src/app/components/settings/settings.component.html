@@ -1,0 +1,72 @@
+<div class="settings-container">
+  <div class="header-section">
+    <h2>Settings</h2>
+  </div>
+
+  @if (loading) {
+    <div class="loading-indicator">Loading settings...</div>
+  } @else if (error) {
+    <div class="error-message">{{ error }}</div>
+  } @else {
+    <div class="settings-form-container">
+      
+      <form (ngSubmit)="saveSettings()">
+        <div class="form-section">
+          <h3>Brand Information</h3>
+          
+          <div class="form-group">
+            <label>Brand Name *</label>
+            <input type="text" [(ngModel)]="settings.brandName" name="brandName" required>
+          </div>
+          
+          <div class="form-group">
+            <label>Brand Logo</label>
+            <app-image-upload
+              [previewUrl]="getImageUrl(settings.brandLogoUrl)"
+              storageKey="brand-logo"
+              label="Upload Brand Logo"
+              [uploadToServer]="true"
+              (imageSelected)="onLogoSelected($event)"
+              (imageRemoved)="onLogoRemoved()">
+            </app-image-upload>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Contact Information</h3>
+          
+          <div class="form-group">
+            <label>Contact Phone</label>
+            <input type="text" [(ngModel)]="settings.contactPhone" name="contactPhone">
+          </div>
+          
+          <div class="form-group">
+            <label>Contact Email</label>
+            <input type="email" [(ngModel)]="settings.contactEmail" name="contactEmail">
+          </div>
+          
+          <div class="form-group">
+            <label>Address</label>
+            <textarea [(ngModel)]="settings.address" name="address" rows="3"></textarea>
+          </div>
+        </div>
+
+        @if (settings.createdAt) {
+          <div class="info-section">
+            <p><strong>Created:</strong> {{ settings.createdAt | date:'medium' }} by {{ settings.createdByUsername || 'Unknown' }}</p>
+            @if (settings.updatedAt) {
+              <p><strong>Last Updated:</strong> {{ settings.updatedAt | date:'medium' }} by {{ settings.updatedByUsername || 'Unknown' }}</p>
+            }
+          </div>
+        }
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="saving">
+            {{ saving ? 'Saving...' : 'Save Settings' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+</div>
+

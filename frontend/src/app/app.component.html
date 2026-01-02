@@ -2,10 +2,23 @@
   <header class="app-header">
     <div class="container">
       <div class="header-content">
-        <h1>{{ 'APP.TITLE' | translate }}</h1>
+        <div class="brand-section">
+          @if (brandLogoUrl) {
+            <img [src]="brandLogoUrl" alt="Brand Logo" class="brand-logo">
+          }
+          <h1>{{ brandName }}</h1>
+        </div>
         <div class="header-actions">
           <button class="btn btn-secondary" (click)="switchLanguage('en')">English</button>
           <button class="btn btn-secondary" (click)="switchLanguage('ur')">اردو</button>
+          @if (isLoggedIn()) {
+            <button class="btn btn-home" (click)="goHome()" title="Go to Dashboard">
+              🏠 Home
+            </button>
+            <button class="btn btn-logout" (click)="logout()" title="Logout">
+              🚪 Logout
+            </button>
+          }
         </div>
       </div>
     </div>
@@ -13,8 +26,9 @@
   <main class="app-main">
     <div class="container">
       <router-outlet></router-outlet>
-<app-notification></app-notification>
     </div>
   </main>
+  <app-footer></app-footer>
 </div>
+<app-notification></app-notification>
 

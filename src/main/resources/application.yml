@@ -28,7 +28,11 @@ management:
 spring:
   application:
     name: Fast-Food-Order-API
-  
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/fast-food}
     username: ${DATABASE_USERNAME:postgres}
@@ -41,7 +45,6 @@ spring:
       connection-timeout: ${HIKARI_CONNECTION_TIMEOUT_MS:150000}
       idle-timeout: ${HIKARI_IDLE_TIMEOUT_MS:30000}
       leak-detection-threshold: ${HIKARI_LEAK_DETECTION_THRESHOLD_MS:60000}
-
   jpa:
     hibernate:
       ddl-auto: none
@@ -52,7 +55,6 @@ spring:
         format_sql: false
         use_sql_comments: false
     packages-to-scan: com.fastfood.order.domain.entity
-
   sql:
     init:
       mode: never
@@ -69,6 +71,8 @@ security:
 
 # Application Configuration
 app:
+  upload:
+    directory: ../frontend/src/assets/images
   brand:
     name: ${BRAND_NAME:Fast Food Express}
     location: ${BRAND_LOCATION:Gujranwala, Pakistan}

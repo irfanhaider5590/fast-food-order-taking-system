@@ -21,9 +21,14 @@
 
 .preview-image {
   width: 100%;
+  max-width: 300px;
   height: auto;
+  max-height: 300px;
   border-radius: 8px;
   border: 2px solid #ddd;
+  object-fit: contain;
+  background: #f9f9f9;
+  display: block;
 }
 
 .remove-btn {

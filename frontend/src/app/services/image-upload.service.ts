@@ -147,13 +147,24 @@ export class ImageUploadService {
    * Validate file before upload
    */
   validateFile(file: File): { valid: boolean; error?: string } {
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      return { valid: false, error: 'Please select an image file' };
+    // Get file extension
+    const fileName = file.name.toLowerCase();
+    const extension = fileName.substring(fileName.lastIndexOf('.'));
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico', '.tiff', '.tif'];
+    
+    // Check file type by extension (more reliable) or MIME type
+    const isValidExtension = allowedExtensions.includes(extension);
+    const isValidMimeType = file.type.startsWith('image/');
+    
+    if (!isValidExtension && !isValidMimeType) {
+      return { 
+        valid: false, 
+        error: `Please select an image file. Supported formats: ${allowedExtensions.join(', ')}` 
+      };
     }
 
     // Check file size (before compression)
-    const maxSizeMB = 5;
+    const maxSizeMB = 10; // Increased to 10MB
     if (file.size > maxSizeMB * 1024 * 1024) {
       return { valid: false, error: `File size must be less than ${maxSizeMB}MB` };
     }

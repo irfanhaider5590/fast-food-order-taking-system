@@ -12,7 +12,7 @@
       <div class="upload-placeholder">
         <input
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/jpg,image/png,image/gif,image/bmp,image/webp,image/svg+xml,image/tiff,image/x-icon"
           (change)="onFileSelected($event)"
           [disabled]="uploading"
           id="image-upload-{{ storageKey }}"

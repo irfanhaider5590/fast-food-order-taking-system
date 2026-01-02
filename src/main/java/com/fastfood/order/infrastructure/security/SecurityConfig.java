@@ -55,13 +55,15 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow OPTIONS requests for CORS preflight
-                        .requestMatchers("/api/auth/**", "/api/public/**", "/actuator/health").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/branch-manager/**").hasAnyRole("ADMIN", "BRANCH_MANAGER")
-                        .anyRequest().authenticated()
-                )
+                       .authorizeHttpRequests(auth -> auth
+                               .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow OPTIONS requests for CORS preflight
+                               .requestMatchers("/api/auth/**", "/api/public/**", "/actuator/health").permitAll()
+                               .requestMatchers("/api/files/serve/**").permitAll() // Allow public access to serve images
+                               .requestMatchers("/api/files/upload", "/api/files/delete").authenticated() // File upload/delete requires authentication
+                               .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                               .requestMatchers("/api/branch-manager/**").hasAnyRole("ADMIN", "BRANCH_MANAGER")
+                               .anyRequest().authenticated()
+                       )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

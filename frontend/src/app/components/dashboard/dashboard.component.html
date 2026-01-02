@@ -1,10 +1,7 @@
 <div class="container">
-  <app-navigation [showBack]="false" [showHome]="false" title="Dashboard"></app-navigation>
-  
   <div class="dashboard-header">
     <div class="user-info">
       <span>Welcome, {{ user?.fullName }}</span>
-      <button class="btn btn-secondary" (click)="logout()">Logout</button>
     </div>
   </div>
 
@@ -24,6 +21,14 @@
     <div class="card dashboard-card" (click)="navigateTo('/menu')">
       <h3>Menu Management</h3>
       <p>Manage menu items and categories</p>
+    </div>
+    <div class="card dashboard-card" (click)="navigateTo('/user-management')">
+      <h3>User Management</h3>
+      <p>Create and manage users (Admin only)</p>
+    </div>
+    <div class="card dashboard-card" (click)="navigateTo('/settings')">
+      <h3>Settings</h3>
+      <p>Configure brand name and logo</p>
     </div>
   </div>
 </div>

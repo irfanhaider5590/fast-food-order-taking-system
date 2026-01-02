@@ -9,7 +9,6 @@ import { OrderResponse, OrderStatus } from '../../models/order.models';
 import { LoggerService } from '../../services/logger.service';
 import { NotificationService } from '../../services/notification.service';
 import { OrderListCompactComponent } from '../order-list/order-list-compact.component';
-import { NavigationComponent } from '../../shared/components/navigation/navigation.component';
 
 interface CartItem {
   menuItemId: number;
@@ -24,7 +23,7 @@ interface CartItem {
 @Component({
   selector: 'app-order-taking',
   standalone: true,
-  imports: [CommonModule, FormsModule, OrderListCompactComponent, NavigationComponent],
+  imports: [CommonModule, FormsModule, OrderListCompactComponent],
   templateUrl: './order-taking.component.html',
   styleUrls: ['./order-taking.component.css']
 })

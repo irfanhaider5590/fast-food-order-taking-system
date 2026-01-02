@@ -50,10 +50,12 @@ CREATE TABLE IF NOT EXISTS users (
     last_login TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by VARCHAR(100),
-    updated_by VARCHAR(100),
+    created_by BIGINT,
+    updated_by BIGINT,
     CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles(id),
-    CONSTRAINT fk_users_branch FOREIGN KEY (branch_id) REFERENCES branches(id)
+    CONSTRAINT fk_users_branch FOREIGN KEY (branch_id) REFERENCES branches(id),
+    CONSTRAINT fk_users_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_users_updated_by FOREIGN KEY (updated_by) REFERENCES users(id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
@@ -334,6 +336,27 @@ CREATE TABLE IF NOT EXISTS brand_config (
 );
 
 CREATE INDEX IF NOT EXISTS idx_brand_config_key ON brand_config(config_key);
+
+-- Settings table
+CREATE TABLE IF NOT EXISTS settings (
+    id BIGSERIAL PRIMARY KEY,
+    brand_name VARCHAR(255) NOT NULL,
+    brand_logo_url TEXT,
+    contact_phone VARCHAR(20),
+    contact_email VARCHAR(255),
+    address TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT,
+    updated_by BIGINT,
+    CONSTRAINT fk_settings_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_settings_updated_by FOREIGN KEY (updated_by) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_settings_created_by ON settings(created_by);
+CREATE INDEX IF NOT EXISTS idx_settings_updated_by ON settings(updated_by);
+
+COMMENT ON TABLE settings IS 'Stores brand settings including name, logo, and contact information';
 
 -- ============================================
 -- INITIAL DATA

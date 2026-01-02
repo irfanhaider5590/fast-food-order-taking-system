@@ -19,6 +19,11 @@
         🏠 Home
       </button>
     }
+    @if (showLogout) {
+      <button class="nav-btn nav-btn-logout" (click)="logout()" title="Logout">
+        🚪 Logout
+      </button>
+    }
   </div>
 </div>
 
