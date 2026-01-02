@@ -109,6 +109,16 @@ fast-food-order-api/
 4. **Default Admin Credentials**
    - Username: `admin`
    - Password: `Admin@123`
+  
+     if it gives any error like invalid user/pass then make this request from postman and can see the logs of java app you can see the hash prints there and you can update that hash in users table for admin user
+
+     curl --location 'http://localhost:8080/fast-food-order-api' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "password": "Admin@123",
+  "hash": "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
+}'
+     
 
 ### Frontend Setup
 
