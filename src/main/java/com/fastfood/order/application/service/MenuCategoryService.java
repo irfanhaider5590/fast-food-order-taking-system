@@ -68,6 +68,19 @@ public class MenuCategoryService {
         return mapToResponse(category);
     }
 
+    /**
+     * Get all categories, optionally filtered by active status
+     * @param active Optional filter for active categories only
+     * @return List of categories
+     */
+    @Transactional(readOnly = true)
+    public List<MenuCategoryResponse> getAllCategories(Boolean active) {
+        if (active != null && active) {
+            return getActiveCategories();
+        }
+        return getAllCategories();
+    }
+
     @Transactional(readOnly = true)
     public List<MenuCategoryResponse> getAllCategories() {
         return categoryRepository.findAll().stream()

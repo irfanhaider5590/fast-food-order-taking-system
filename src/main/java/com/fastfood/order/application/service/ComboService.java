@@ -50,6 +50,18 @@ public class ComboService {
     }
 
     @Transactional(readOnly = true)
+    /**
+     * Get all combos, optionally filtered by availability
+     * @param available Optional filter for available combos only
+     * @return List of combos
+     */
+    public List<ComboResponse> getAllCombos(Boolean available) {
+        if (available != null && available) {
+            return getAvailableCombos();
+        }
+        return getAllCombos();
+    }
+
     public List<ComboResponse> getAllCombos() {
         return comboRepository.findAll().stream()
                 .map(combo -> getComboById(combo.getId()))
