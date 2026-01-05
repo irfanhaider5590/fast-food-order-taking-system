@@ -26,6 +26,14 @@ public class AnalyticsService {
     public SalesAnalyticsResponse getSalesAnalytics(Long branchId, LocalDateTime startDate, LocalDateTime endDate) {
         LocalDateTime now = LocalDateTime.now();
         
+        // Set default date range if not provided (last 12 months)
+        if (startDate == null) {
+            startDate = now.minusMonths(12);
+        }
+        if (endDate == null) {
+            endDate = now;
+        }
+        
         // Current month
         LocalDateTime currentMonthStart = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
         SalesAnalyticsResponse.SalesSummary currentMonth = calculateSummary(

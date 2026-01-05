@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MenuService } from '../../services/menu.service';
@@ -59,7 +59,8 @@ export class MenuManagementComponent implements OnInit {
     private menuService: MenuService,
     private fb: FormBuilder,
     private imageUploadService: ImageUploadService,
-    private logger: LoggerService
+    private logger: LoggerService,
+    private cdr: ChangeDetectorRef
   ) {
     this.categoryForm = this.fb.group({
       nameEn: ['', Validators.required],
@@ -107,14 +108,37 @@ export class MenuManagementComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadAllData();
+    // Load data based on active tab
+    this.loadDataForActiveTab();
   }
 
   // Tab Management
   setTab(tab: 'categories' | 'items' | 'addons' | 'combos'): void {
     this.activeTab = tab;
-    // Reload data when switching tabs to ensure fresh data
-    this.loadAllData();
+    // Load data for the active tab
+    this.loadDataForActiveTab();
+  }
+
+  private loadDataForActiveTab(): void {
+    // Always load categories as they're needed for menu items dropdown
+    this.loadCategories();
+    
+    // Load data based on active tab
+    switch (this.activeTab) {
+      case 'categories':
+        // Categories already loaded above
+        break;
+      case 'items':
+        this.loadMenuItems();
+        break;
+      case 'addons':
+        this.loadAddOns();
+        break;
+      case 'combos':
+        this.loadCombos();
+        this.loadMenuItems(); // Combos need menu items for selection
+        break;
+    }
   }
 
   private loadAllData(): void {
@@ -130,10 +154,13 @@ export class MenuManagementComponent implements OnInit {
       next: (data) => {
         this.categories = data;
         this.logger.debug(`Loaded ${data.length} categories`);
+        // Force change detection to ensure UI updates
+        this.cdr.detectChanges();
       },
       error: (err) => {
         this.logger.error('Error loading categories:', err);
         this.categories = [];
+        this.cdr.detectChanges();
       }
     });
   }

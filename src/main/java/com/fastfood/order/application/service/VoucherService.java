@@ -73,6 +73,19 @@ public class VoucherService {
         return mapToResponse(voucher);
     }
 
+    /**
+     * Get all vouchers, optionally filtered by active status
+     * @param active Optional filter for active vouchers only
+     * @return List of vouchers
+     */
+    @Transactional(readOnly = true)
+    public List<VoucherResponse> getAllVouchers(Boolean active) {
+        if (active != null && active) {
+            return getActiveVouchers();
+        }
+        return getAllVouchers();
+    }
+
     @Transactional(readOnly = true)
     public List<VoucherResponse> getAllVouchers() {
         return voucherRepository.findAll().stream()

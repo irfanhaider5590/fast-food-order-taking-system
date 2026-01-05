@@ -63,6 +63,18 @@ public class MenuItemService {
     }
 
     @Transactional(readOnly = true)
+    /**
+     * Get all menu items, optionally filtered by category
+     * @param categoryId Optional category ID to filter by
+     * @return List of menu items
+     */
+    public List<MenuItemResponse> getAllMenuItems(Long categoryId) {
+        if (categoryId != null) {
+            return getMenuItemsByCategory(categoryId);
+        }
+        return getAllMenuItems();
+    }
+
     public List<MenuItemResponse> getAllMenuItems() {
         return menuItemRepository.findAll().stream()
                 .map(item -> {

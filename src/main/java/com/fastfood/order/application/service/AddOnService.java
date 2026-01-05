@@ -68,6 +68,19 @@ public class AddOnService {
         return mapToResponse(addOn);
     }
 
+    /**
+     * Get all add-ons, optionally filtered by availability
+     * @param available Optional filter for available add-ons only
+     * @return List of add-ons
+     */
+    @Transactional(readOnly = true)
+    public List<AddOnResponse> getAllAddOns(Boolean available) {
+        if (available != null && available) {
+            return getAvailableAddOns();
+        }
+        return getAllAddOns();
+    }
+
     @Transactional(readOnly = true)
     public List<AddOnResponse> getAllAddOns() {
         return addOnRepository.findAll().stream()

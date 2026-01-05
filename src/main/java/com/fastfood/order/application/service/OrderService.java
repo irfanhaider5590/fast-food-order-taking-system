@@ -2,6 +2,9 @@ package com.fastfood.order.application.service;
 
 import com.fastfood.order.application.dto.OrderRequest;
 import com.fastfood.order.application.dto.OrderResponse;
+import com.fastfood.order.application.dto.OrderItemResponse;
+import com.fastfood.order.application.mapper.OrderMapper;
+import com.fastfood.order.application.mapper.OrderItemMapper;
 import com.fastfood.order.domain.entity.*;
 import com.fastfood.order.infrastructure.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +39,8 @@ public class OrderService {
     private final ReceiptPrintService receiptPrintService;
     private final StockManagementService stockManagementService;
     private final StockWarningService stockWarningService;
+    private final OrderMapper orderMapper;
+    private final OrderItemMapper orderItemMapper;
 
     @Transactional
     public OrderResponse createOrder(OrderRequest request, Long userId) {
@@ -348,46 +353,17 @@ public class OrderService {
     }
 
     private OrderResponse mapToOrderResponse(Order order) {
-        OrderResponse.OrderResponseBuilder builder = OrderResponse.builder()
-                .id(order.getId())
-                .orderNumber(order.getOrderNumber())
-                .branchId(order.getBranch().getId())
-                .branchName(order.getBranch().getName())
-                .orderType(order.getOrderType())
-                .tableNumber(order.getTableNumber())
-                .customerName(order.getCustomerName())
-                .customerPhone(order.getCustomerPhone())
-                .deliveryAddress(order.getDeliveryAddress())
-                .paymentMethod(order.getPaymentMethod())
-                .orderStatus(order.getOrderStatus())
-                .paymentStatus(order.getPaymentStatus())
-                .subtotal(order.getSubtotal())
-                .discountAmount(order.getDiscountAmount())
-                .voucherCode(order.getVoucherCode())
-                .totalAmount(order.getTotalAmount())
-                .notes(order.getNotes())
-                .orderDate(order.getOrderDate())
-                .completedAt(order.getCompletedAt());
+        // Use OrderMapper to map Order entity to OrderResponse DTO
+        OrderResponse response = orderMapper.toResponse(order);
         
-        // Map order items
-        List<com.fastfood.order.application.dto.OrderItemResponse> itemResponses = orderItemRepository.findByOrderId(order.getId())
-                .stream()
-                .map(item -> com.fastfood.order.application.dto.OrderItemResponse.builder()
-                        .id(item.getId())
-                        .menuItemId(item.getMenuItem() != null ? item.getMenuItem().getId() : null)
-                        .comboId(item.getCombo() != null ? item.getCombo().getId() : null)
-                        .itemNameEn(item.getItemNameEn())
-                        .itemNameUr(item.getItemNameUr())
-                        .sizeCode(item.getSizeCode())
-                        .quantity(item.getQuantity())
-                        .unitPrice(item.getUnitPrice())
-                        .totalPrice(item.getTotalPrice())
-                        .notes(item.getNotes())
-                        .build())
+        // Load and map order items using OrderItemMapper
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+        List<OrderItemResponse> itemResponses = orderItems.stream()
+                .map(orderItemMapper::toResponse)
                 .collect(Collectors.toList());
-        builder.items(itemResponses);
+        response.setItems(itemResponses);
         
-        return builder.build();
+        return response;
     }
 
     // Helper class for item details

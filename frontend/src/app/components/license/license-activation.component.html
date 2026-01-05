@@ -7,27 +7,27 @@
     </div>
 
     <div *ngIf="!loading && licenseStatus" class="license-status">
-      <div class="status-card" [class.valid]="licenseStatus?.isValid" [class.invalid]="!licenseStatus?.isValid">
+      <div class="status-card" [class.valid]="licenseStatus.isValid" [class.invalid]="!licenseStatus.isValid">
         <h3>Current License Status</h3>
         <div class="status-info">
           <p><strong>Status:</strong> 
-            <span [class.text-success]="licenseStatus?.isValid" [class.text-danger]="!licenseStatus?.isValid">
-              {{ licenseStatus?.isValid ? 'Valid' : 'Invalid/Expired' }}
+            <span [class.text-success]="licenseStatus.isValid" [class.text-danger]="!licenseStatus.isValid">
+              {{ licenseStatus.isValid ? 'Valid' : 'Invalid/Expired' }}
             </span>
           </p>
-          <p><strong>Activated:</strong> {{ licenseStatus?.isActivated ? 'Yes' : 'No' }}</p>
-          <p *ngIf="licenseStatus?.licenseType"><strong>License Type:</strong> {{ licenseStatus?.licenseType }}</p>
-          <p *ngIf="licenseStatus?.activatedAt"><strong>Activated At:</strong> {{ formatDate(licenseStatus?.activatedAt) }}</p>
-          <p *ngIf="licenseStatus?.expiresAt"><strong>Expires At:</strong> {{ formatDate(licenseStatus?.expiresAt) }}</p>
-          <p *ngIf="licenseStatus && licenseStatus.daysRemaining > 0"><strong>Days Remaining:</strong> {{ licenseStatus.daysRemaining }}</p>
+          <p><strong>Activated:</strong> {{ licenseStatus.isActivated ? 'Yes' : 'No' }}</p>
+          <p *ngIf="licenseStatus.licenseType"><strong>License Type:</strong> {{ licenseStatus.licenseType }}</p>
+          <p *ngIf="licenseStatus.activatedAt"><strong>Activated At:</strong> {{ formatDate(licenseStatus.activatedAt) }}</p>
+          <p *ngIf="licenseStatus.expiresAt"><strong>Expires At:</strong> {{ formatDate(licenseStatus.expiresAt) }}</p>
+          <p *ngIf="licenseStatus.daysRemaining > 0"><strong>Days Remaining:</strong> {{ licenseStatus.daysRemaining }}</p>
           <p><strong>Server ID:</strong> <code>{{ machineId }}</code></p>
           <p class="text-muted"><small>This Server ID is shared by all users connecting to this server instance.</small></p>
-          <p class="status-message">{{ licenseStatus?.message }}</p>
+          <p class="status-message">{{ licenseStatus.message }}</p>
         </div>
       </div>
     </div>
 
-    <div *ngIf="!licenseStatus?.isValid" class="activation-form">
+    <div *ngIf="!licenseStatus || !licenseStatus.isValid" class="activation-form">
       <h3>Activate License</h3>
       <form [formGroup]="licenseForm" (ngSubmit)="activateLicense()">
         <div class="form-group">

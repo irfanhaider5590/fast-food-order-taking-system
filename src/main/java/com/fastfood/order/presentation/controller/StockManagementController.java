@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Controller for stock management operations
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/stock")
@@ -22,21 +25,21 @@ public class StockManagementController {
 
     @GetMapping("/items")
     public ResponseEntity<List<StockItemResponse>> getAllStockItems() {
-        log.info("GET /api/stock/items - Fetching all stock items");
+        log.debug("GET /api/stock/items - Fetching all stock items");
         List<StockItemResponse> items = stockManagementService.getAllStockItems();
         return ResponseEntity.ok(items);
     }
 
     @GetMapping("/items/active")
     public ResponseEntity<List<StockItemResponse>> getActiveStockItems() {
-        log.info("GET /api/stock/items/active - Fetching active stock items");
+        log.debug("GET /api/stock/items/active - Fetching active stock items");
         List<StockItemResponse> items = stockManagementService.getActiveStockItems();
         return ResponseEntity.ok(items);
     }
 
     @GetMapping("/items/{id}")
     public ResponseEntity<StockItemResponse> getStockItemById(@PathVariable Long id) {
-        log.info("GET /api/stock/items/{} - Fetching stock item", id);
+        log.debug("GET /api/stock/items/{} - Fetching stock item", id);
         StockItemResponse item = stockManagementService.getStockItemById(id);
         return ResponseEntity.ok(item);
     }
@@ -70,7 +73,7 @@ public class StockManagementController {
     @GetMapping("/menu-items/{menuItemId}/ingredients")
     public ResponseEntity<List<MenuItemIngredientResponse>> getMenuItemIngredients(
             @PathVariable Long menuItemId) {
-        log.info("GET /api/stock/menu-items/{}/ingredients - Fetching ingredients", menuItemId);
+        log.debug("GET /api/stock/menu-items/{}/ingredients - Fetching ingredients", menuItemId);
         List<MenuItemIngredientResponse> ingredients = stockManagementService.getMenuItemIngredients(menuItemId);
         return ResponseEntity.ok(ingredients);
     }
