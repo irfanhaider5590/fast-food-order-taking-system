@@ -82,6 +82,15 @@ app:
     charge-included: true
   franchise:
     inquiry-enabled: true
+  receipt:
+    auto-print-enabled: ${RECEIPT_AUTO_PRINT_ENABLED:false}
+    printer-name: ${RECEIPT_PRINTER_NAME:}
+  license:
+    generation:
+      api-key: ${LICENSE_GENERATION_API_KEY:xxyy123123123}
+  password:
+    reset:
+      admin-secret-key: ${ADMIN_PASSWORD_RESET_SECRET_KEY:EMERGENCY_ADMIN_RESET_KEY} # Secret key for emergency admin password reset
 
 # Logging Configuration
 logging:
