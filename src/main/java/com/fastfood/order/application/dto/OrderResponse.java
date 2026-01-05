@@ -36,5 +36,6 @@ public class OrderResponse {
     private LocalDateTime orderDate;
     private LocalDateTime completedAt;
     private List<OrderItemResponse> items;
+    private List<StockWarningResponse> stockWarnings; // Warnings for low stock items
 }
 

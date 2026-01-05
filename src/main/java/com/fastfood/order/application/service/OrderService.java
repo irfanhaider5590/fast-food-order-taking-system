@@ -33,6 +33,9 @@ public class OrderService {
     private final VoucherRepository voucherRepository;
     private final OrderItemRepository orderItemRepository;
     private final AddOnRepository addOnRepository;
+    private final ReceiptPrintService receiptPrintService;
+    private final StockManagementService stockManagementService;
+    private final StockWarningService stockWarningService;
 
     @Transactional
     public OrderResponse createOrder(OrderRequest request, Long userId) {
@@ -54,7 +57,39 @@ public class OrderService {
         saveOrderItems(savedOrder, orderItems);
         
         log.info("Order created successfully: {}", savedOrder.getOrderNumber());
-        return mapToOrderResponse(savedOrder);
+        
+        // Deduct stock for order items
+        try {
+            stockManagementService.deductStockForOrder(savedOrder);
+        } catch (Exception e) {
+            log.error("Error deducting stock for order: {}", savedOrder.getOrderNumber(), e);
+            // Don't fail the order if stock deduction fails
+        }
+        
+        // Check for stock warnings after deduction
+        List<com.fastfood.order.application.dto.StockWarningResponse> stockWarnings = null;
+        try {
+            stockWarnings = stockWarningService.checkStockWarningsOnOrder();
+            if (!stockWarnings.isEmpty()) {
+                log.warn("Low stock warnings detected after order placement: {}", stockWarnings.size());
+            }
+        } catch (Exception e) {
+            log.error("Error checking stock warnings for order: {}", savedOrder.getOrderNumber(), e);
+            // Don't fail the order if warning check fails
+        }
+        
+        OrderResponse response = mapToOrderResponse(savedOrder);
+        response.setStockWarnings(stockWarnings);
+        
+        // Print receipt if enabled
+        try {
+            receiptPrintService.printReceipt(response);
+        } catch (Exception e) {
+            log.error("Error printing receipt for order: {}", savedOrder.getOrderNumber(), e);
+            // Don't fail the order if printing fails
+        }
+        
+        return response;
     }
 
     // Private helper methods

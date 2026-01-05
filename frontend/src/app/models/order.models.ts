@@ -66,6 +66,18 @@ export interface OrderResponse {
   completedAt?: string;
   createdAt?: string;
   items?: OrderItemResponse[];
+  stockWarnings?: StockWarning[];
+}
+
+export interface StockWarning {
+  stockItemId: number;
+  stockItemNameEn?: string;
+  stockItemNameUr?: string;
+  warningMessageEn: string;
+  warningMessageUr: string;
+  currentQuantity: number;
+  thresholdQuantity: number;
+  isAcknowledged?: boolean;
 }
 
 export interface OrderItemResponse {

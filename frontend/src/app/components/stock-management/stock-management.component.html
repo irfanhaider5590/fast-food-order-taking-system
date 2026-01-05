@@ -1,0 +1,184 @@
+<div class="stock-management-container">
+  <!-- Tabs -->
+  <div class="tabs">
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'items'"
+      (click)="setTab('items')">
+      Stock Items
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'ingredients'"
+      (click)="setTab('ingredients')">
+      Menu Item Ingredients
+    </button>
+  </div>
+
+  <!-- Warning Interval Configuration -->
+  <div class="config-section" *ngIf="activeTab === 'items'">
+    <div class="config-card">
+      <div class="config-header">
+        <h3>Stock Warning Settings</h3>
+        <button class="btn btn-sm btn-primary" (click)="showIntervalConfig = !showIntervalConfig">
+          {{ showIntervalConfig ? 'Cancel' : 'Configure Warning Interval' }}
+        </button>
+      </div>
+      <div *ngIf="showIntervalConfig" class="config-form">
+        <div class="form-group">
+          <label>Warning Check Interval (Hours)</label>
+          <input type="number" class="form-control" [(ngModel)]="warningIntervalHours" min="1" max="24" step="1">
+          <small class="form-text">System will check for low stock warnings every {{ warningIntervalHours }} hour(s)</small>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" (click)="saveWarningInterval()">Save</button>
+          <button class="btn btn-secondary" (click)="showIntervalConfig = false">Cancel</button>
+        </div>
+      </div>
+      <div *ngIf="!showIntervalConfig" class="config-display">
+        <p><strong>Current Warning Interval:</strong> {{ warningIntervalHours }} hour(s)</p>
+        <button class="btn btn-sm btn-primary" (click)="checkWarningsNow()" style="margin-top: 10px;">Check Warnings Now</button>
+      </div>
+    </div>
+
+    <!-- Alerts Enable/Disable Toggle -->
+    <div class="config-card" style="margin-top: 20px;">
+      <div class="config-header">
+        <h3>Stock Alerts</h3>
+      </div>
+      <div class="config-display">
+        <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+          <label style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" [(ngModel)]="alertsEnabled" (change)="toggleAlerts()" style="width: 20px; height: 20px; cursor: pointer;">
+            <span><strong>Enable Stock Alerts</strong></span>
+          </label>
+        </div>
+        <small class="form-text" style="display: block; margin-top: 8px; color: #666;">
+          When enabled, system will show notifications for low stock items. When disabled, no alerts will be displayed.
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Items Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'items'">
+    <div class="section-header">
+      <h2>Stock Items</h2>
+      <button class="btn btn-primary" (click)="openStockItemForm()">+ Add Stock Item</button>
+    </div>
+
+    <!-- Stock Item Form -->
+    <div class="form-card" *ngIf="showStockItemForm">
+      <h3>{{ editingStockItem ? 'Edit Stock Item' : 'New Stock Item' }}</h3>
+      <form [formGroup]="stockItemForm" (ngSubmit)="saveStockItem()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name (English) *</label>
+            <input type="text" formControlName="nameEn" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Name (Urdu)</label>
+            <input type="text" formControlName="nameUr" class="form-control">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Unit *</label>
+            <select formControlName="unit" class="form-control">
+              <option value="piece">Piece</option>
+              <option value="kg">Kilogram</option>
+              <option value="gram">Gram</option>
+              <option value="liter">Liter</option>
+              <option value="ml">Milliliter</option>
+              <option value="packet">Packet</option>
+              <option value="slice">Slice</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Current Quantity *</label>
+            <input type="number" formControlName="currentQuantity" class="form-control" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label>Minimum Threshold *</label>
+            <input type="number" formControlName="minThreshold" class="form-control" step="0.01" min="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" formControlName="isActive"> Active
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" (click)="resetStockItemForm()">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Stock Items List -->
+    <div *ngIf="loading" class="loading">Loading stock items...</div>
+    <div class="items-grid" *ngIf="!loading && stockItems.length > 0">
+      <div class="item-card" *ngFor="let item of stockItems" [class.low-stock]="item.isLowStock">
+        <div class="item-header">
+          <h4>{{ item.nameEn }}</h4>
+          <span class="badge" [class.badge-warning]="item.isLowStock" [class.badge-success]="!item.isLowStock">
+            {{ item.isLowStock ? 'Low Stock' : 'In Stock' }}
+          </span>
+        </div>
+        <div class="item-details">
+          <p><strong>Unit:</strong> {{ item.unit }}</p>
+          <p><strong>Current:</strong> {{ item.currentQuantity }} {{ item.unit }}</p>
+          <p><strong>Threshold:</strong> {{ item.minThreshold }} {{ item.unit }}</p>
+          <p *ngIf="item.nameUr"><strong>Name (Urdu):</strong> {{ item.nameUr }}</p>
+        </div>
+        <div class="item-actions">
+          <button class="btn btn-sm btn-primary" (click)="openStockItemForm(item)">Edit</button>
+          <button class="btn btn-sm btn-danger" (click)="deleteStockItem(item.id!)">Delete</button>
+        </div>
+      </div>
+    </div>
+    <div *ngIf="!loading && stockItems.length === 0" class="no-items">
+      <p>No stock items found. Click "+ Add Stock Item" to create one.</p>
+    </div>
+  </div>
+
+  <!-- Menu Item Ingredients Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'ingredients'">
+    <div class="section-header">
+      <h2>Menu Item Ingredients</h2>
+    </div>
+
+    <!-- Menu Item Selection -->
+    <div class="form-card">
+      <h3>Select Menu Item</h3>
+      <select class="form-control" [(ngModel)]="selectedMenuItem" (change)="selectMenuItem(selectedMenuItem!)">
+        <option [ngValue]="null">-- Select Menu Item --</option>
+        <option *ngFor="let item of menuItems" [ngValue]="item">{{ item.nameEn }}</option>
+      </select>
+    </div>
+
+    <!-- Ingredients List -->
+    <div class="form-card" *ngIf="selectedMenuItem">
+      <h3>Ingredients for {{ selectedMenuItem.nameEn }}</h3>
+      
+      <div class="ingredients-list">
+        <div class="ingredient-item" *ngFor="let ing of menuItemIngredients; let i = index">
+          <select class="form-control" [(ngModel)]="ing.stockItemId">
+            <option [value]="0">-- Select Stock Item --</option>
+            <option *ngFor="let stock of availableStockItems" [value]="stock.id">
+              {{ stock.nameEn }} ({{ stock.unit }})
+            </option>
+          </select>
+          <input type="number" class="form-control" [(ngModel)]="ing.quantityRequired" step="0.01" min="0" placeholder="Quantity">
+          <button class="btn btn-sm btn-danger" (click)="removeIngredient(i)">Remove</button>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" (click)="addIngredient()">+ Add Ingredient</button>
+        <button class="btn btn-success" (click)="saveMenuItemIngredients()">Save Ingredients</button>
+      </div>
+    </div>
+  </div>
+</div>
+

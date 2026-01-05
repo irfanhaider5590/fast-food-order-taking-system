@@ -1,4 +1,16 @@
 <div class="app-container">
+  <!-- License Warning Banner -->
+  @if (isLoggedIn() && licenseWarningMessage) {
+    <div class="license-warning-banner">
+      <div class="container">
+        <div class="warning-content">
+          <span class="warning-icon">⚠️</span>
+          <span class="warning-text">{{ licenseWarningMessage }}</span>
+          <button class="btn btn-sm btn-outline-light ms-auto" (click)="dismissWarning()">✕</button>
+        </div>
+      </div>
+    </div>
+  }
   <header class="app-header">
     <div class="container">
       <div class="header-content">

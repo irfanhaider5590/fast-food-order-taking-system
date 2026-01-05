@@ -66,6 +66,84 @@
           </button>
         </div>
       </form>
+
+      <!-- License Management Section -->
+      <div class="license-section">
+        <h3>License Management</h3>
+        
+        <!-- Current License Status -->
+        @if (licenseStatus) {
+          <div class="license-status-card" [class.valid]="licenseStatus.isValid" [class.invalid]="!licenseStatus.isValid">
+            <h4>Current License Status</h4>
+            <div class="status-info">
+              <p><strong>Status:</strong> 
+                <span [class.text-success]="licenseStatus.isValid" [class.text-danger]="!licenseStatus.isValid">
+                  {{ licenseStatus.isValid ? 'Valid' : 'Invalid/Expired' }}
+                </span>
+              </p>
+              <p><strong>Activated:</strong> {{ licenseStatus.isActivated ? 'Yes' : 'No' }}</p>
+              @if (licenseStatus.licenseType) {
+                <p><strong>License Type:</strong> {{ licenseStatus.licenseType }}</p>
+              }
+              @if (licenseStatus.activatedAt) {
+                <p><strong>Activated At:</strong> {{ formatDate(licenseStatus.activatedAt) }}</p>
+              }
+              @if (licenseStatus.expiresAt) {
+                <p><strong>Expires At:</strong> {{ formatDate(licenseStatus.expiresAt) }}</p>
+              }
+              @if (licenseStatus.daysRemaining > 0) {
+                <p><strong>Days Remaining:</strong> {{ licenseStatus.daysRemaining }}</p>
+              }
+              <p><strong>Server ID:</strong> <code>{{ licenseStatus.machineId }}</code></p>
+              <p class="machine-id-info">
+                <small>
+                  <strong>What is Server ID?</strong><br>
+                  Server ID is a unique identifier for this server instance. All users (branch manager, staff, etc.) connecting to this server share the same Server ID. 
+                  Once a license is activated on this server, it can be used by all users on the same server. This allows multiple users to access the system with a single license.
+                </small>
+              </p>
+              <p class="status-message">{{ licenseStatus.message }}</p>
+              @if (licenseStatus.shouldShowWarning && licenseStatus.warningMessage) {
+                <div class="alert alert-warning mt-2">
+                  <strong>⚠️ Warning:</strong> {{ licenseStatus.warningMessage }}
+                </div>
+              }
+            </div>
+            <div class="mt-3">
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="refreshLicenseStatus()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Status
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- License Activation Form (Admin only) -->
+        @if (isAdmin) {
+          <div class="license-activation-form">
+            <h4>Activate/Extend License</h4>
+            <form [formGroup]="licenseForm" (ngSubmit)="activateLicense()">
+              <div class="form-group">
+                <label>License Key</label>
+                <input type="text" formControlName="licenseKey" class="form-control" 
+                       placeholder="Enter license key (e.g., XXXX-XXXX-XXXX-XXXX)">
+                <small class="form-text">Enter a new license key to extend your current license. Days will be added to your existing expiry date.</small>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary" [disabled]="licenseForm.invalid || saving">
+                  {{ saving ? 'Activating...' : 'Activate/Extend License' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        } @else {
+          <div class="license-activation-form">
+            <div class="alert alert-info">
+              <strong>Note:</strong> Only administrators can activate or extend licenses. Please contact your administrator for license activation.
+            </div>
+          </div>
+        }
+
+      </div>
     </div>
   }
 </div>

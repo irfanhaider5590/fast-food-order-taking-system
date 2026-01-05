@@ -5,31 +5,63 @@
     </div>
   </div>
 
+  @if (!isLicenseValid) {
+    <div class="license-warning">
+      <div class="warning-card">
+        <h2>⚠️ License Expired or Invalid</h2>
+        @if (isAdmin) {
+          <p>Your license has expired or is invalid. Please activate a valid license to access all features.</p>
+          <p>Please go to Settings to activate your license.</p>
+          <button class="btn btn-primary" (click)="navigateTo('/settings')">Go to Settings</button>
+        } @else {
+          <p>Your license has expired or is invalid. Please contact your administrator to renew the license.</p>
+          <p>You can only access Order Taking and Order Management features until the license is renewed.</p>
+        }
+      </div>
+    </div>
+  }
+
   <div class="dashboard-grid">
-    <div class="card dashboard-card" (click)="navigateTo('/orders')">
-      <h3>Order Taking</h3>
-      <p>Create and manage orders</p>
-    </div>
-    <div class="card dashboard-card" (click)="navigateTo('/order-management')">
-      <h3>Order Management</h3>
-      <p>Search, filter and update order status</p>
-    </div>
-    <div class="card dashboard-card" (click)="navigateTo('/analytics')">
-      <h3>Analytics</h3>
-      <p>View sales analytics and reports</p>
-    </div>
-    <div class="card dashboard-card" (click)="navigateTo('/menu')">
-      <h3>Menu Management</h3>
-      <p>Manage menu items and categories</p>
-    </div>
-    <div class="card dashboard-card" (click)="navigateTo('/user-management')">
-      <h3>User Management</h3>
-      <p>Create and manage users (Admin only)</p>
-    </div>
-    <div class="card dashboard-card" (click)="navigateTo('/settings')">
-      <h3>Settings</h3>
-      <p>Configure brand name and logo</p>
-    </div>
+    <!-- Order Taking and Order Management - Available to all users when license is valid -->
+    @if (isLicenseValid) {
+      <div class="card dashboard-card" (click)="navigateTo('/orders')">
+        <h3>Order Taking</h3>
+        <p>Create and manage orders</p>
+      </div>
+      <div class="card dashboard-card" (click)="navigateTo('/order-management')">
+        <h3>Order Management</h3>
+        <p>Search, filter and update order status</p>
+      </div>
+    }
+    
+    <!-- Admin Only Sections - Visible for admin when license is valid -->
+    @if (isAdmin && isLicenseValid) {
+      <div class="card dashboard-card" (click)="navigateTo('/analytics')">
+        <h3>Analytics</h3>
+        <p>View sales analytics and reports</p>
+      </div>
+      <div class="card dashboard-card" (click)="navigateTo('/menu')">
+        <h3>Menu Management</h3>
+        <p>Manage menu items and categories</p>
+      </div>
+      <div class="card dashboard-card" (click)="navigateTo('/stock')">
+        <h3>Stock Management</h3>
+        <p>Manage stock items and ingredients</p>
+      </div>
+      <div class="card dashboard-card" (click)="navigateTo('/user-management')">
+        <h3>User Management</h3>
+        <p>Create and manage users</p>
+      </div>
+    }
+    
+    <!-- Settings - Always visible for admin, regardless of license status -->
+    @if (isAdmin) {
+      <div class="card dashboard-card" (click)="navigateTo('/settings')">
+        <h3>Settings</h3>
+        <p>Configure brand name, logo, and license</p>
+      </div>
+    }
+    
   </div>
 </div>
 
