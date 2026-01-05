@@ -137,3 +137,206 @@
   background-color: #fee2e2;
 }
 
+/* License Management Styles */
+.license-section {
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 2px solid #eee;
+}
+
+.license-section h3 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.license-status-card {
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #ccc;
+  background-color: #f8f9fa;
+  margin-bottom: 20px;
+}
+
+.license-status-card.valid {
+  border-left-color: #28a745;
+  background-color: #d4edda;
+}
+
+.license-status-card.invalid {
+  border-left-color: #dc3545;
+  background-color: #f8d7da;
+}
+
+.license-status-card h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.status-info p {
+  margin: 8px 0;
+}
+
+.status-info code {
+  background-color: rgba(0,0,0,0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.status-message {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: rgba(0,0,0,0.05);
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.machine-id-info {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #e7f3ff;
+  border-left: 3px solid #007bff;
+  border-radius: 4px;
+}
+
+.machine-id-info small {
+  display: block;
+  color: #333;
+  line-height: 1.5;
+}
+
+.text-success {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.text-danger {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.license-activation-form {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #fff3cd;
+  border-radius: 8px;
+  border: 1px solid #ffc107;
+}
+
+.license-activation-form h4 {
+  margin-top: 0;
+}
+
+.admin-license-section {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #e7f3ff;
+  border-radius: 8px;
+  border: 1px solid #007bff;
+}
+
+.admin-license-section h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.licenses-list {
+  margin-top: 30px;
+}
+
+.licenses-list h4 {
+  margin-bottom: 15px;
+}
+
+.licenses-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.licenses-table thead {
+  background-color: #007bff;
+  color: white;
+}
+
+.licenses-table th,
+.licenses-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.licenses-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.licenses-table tbody tr.expired {
+  background-color: #fff5f5;
+}
+
+.licenses-table tbody tr.inactive {
+  opacity: 0.6;
+}
+
+.licenses-table code {
+  background-color: #f4f4f4;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.badge-success {
+  display: inline-block;
+  padding: 4px 8px;
+  background-color: #28a745;
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.badge-danger {
+  display: inline-block;
+  padding: 4px 8px;
+  background-color: #dc3545;
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.btn-success:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.form-text {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #6b7280;
+}
+

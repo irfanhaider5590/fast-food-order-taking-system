@@ -1,6 +1,7 @@
 package com.fastfood.order.presentation.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -40,6 +41,28 @@ public class GlobalExceptionHandler {
         error.put("message", "Invalid username or password");
         error.put("status", HttpStatus.UNAUTHORIZED.value());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.error("Data integrity violation occurred", ex);
+        Map<String, Object> error = new HashMap<>();
+        
+        String message = ex.getMessage();
+        if (message != null) {
+            if (message.contains("duplicate key") || message.contains("uk_menu_item_ingredient")) {
+                error.put("message", "This ingredient is already assigned to this menu item. Please remove duplicates.");
+            } else if (message.contains("foreign key") || message.contains("constraint")) {
+                error.put("message", "Cannot perform this operation due to data integrity constraints.");
+            } else {
+                error.put("message", "Data integrity violation: " + message);
+            }
+        } else {
+            error.put("message", "Data integrity violation occurred");
+        }
+        
+        error.put("status", HttpStatus.CONFLICT.value());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     @ExceptionHandler(RuntimeException.class)

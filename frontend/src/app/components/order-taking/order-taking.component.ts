@@ -8,7 +8,11 @@ import { OrderService } from '../../services/order.service';
 import { OrderResponse, OrderStatus } from '../../models/order.models';
 import { LoggerService } from '../../services/logger.service';
 import { NotificationService } from '../../services/notification.service';
+import { SettingsService } from '../../services/settings.service';
+import { Settings } from '../../models/settings.models';
 import { OrderListCompactComponent } from '../order-list/order-list-compact.component';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 
 interface CartItem {
   menuItemId: number;
@@ -59,7 +63,9 @@ export class OrderTakingComponent implements OnInit, AfterViewInit {
     private cdr: ChangeDetectorRef,
     private logger: LoggerService,
     private router: Router,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private settingsService: SettingsService,
+    private http: HttpClient
   ) {}
 
   ngOnInit() {
@@ -251,6 +257,17 @@ export class OrderTakingComponent implements OnInit, AfterViewInit {
           4000
         );
         
+        // Show stock warnings if any
+        if (response.stockWarnings && response.stockWarnings.length > 0) {
+          response.stockWarnings.forEach(warning => {
+            const message = `${warning.warningMessageEn}\n${warning.warningMessageUr}`;
+            this.notificationService.showWarning(message, 8000);
+          });
+        }
+        
+        // Print receipt if enabled (check setting first)
+        this.checkAndPrintReceipt(response);
+        
         // Reset form first
         this.resetOrderForm();
         
@@ -405,5 +422,204 @@ export class OrderTakingComponent implements OnInit, AfterViewInit {
       'CANCELLED': 'Cancelled'
     };
     return labels[status] || status;
+  }
+
+  checkAndPrintReceipt(order: OrderResponse): void {
+    // Check if auto-print is enabled
+    this.http.get<{autoPrintEnabled: boolean}>(`${environment.apiUrl}/receipt/auto-print-status`).subscribe({
+      next: (status) => {
+        if (status.autoPrintEnabled) {
+          this.printReceipt(order);
+        } else {
+          this.logger.debug('Auto-print is disabled, skipping receipt printing');
+        }
+      },
+      error: (err) => {
+        this.logger.error('Error checking auto-print status:', err);
+        // Don't print if we can't verify the setting
+      }
+    });
+  }
+
+  printReceipt(order: OrderResponse): void {
+    // Fetch settings first, then generate receipt
+    this.settingsService.getSettings().subscribe({
+      next: (settings: Settings) => {
+        try {
+          const receiptContent = this.generateReceiptHtml(order, settings);
+          const printWindow = window.open('', '_blank', 'width=300,height=600');
+          if (printWindow) {
+            printWindow.document.write(receiptContent);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+              printWindow.print();
+              // Auto-close after printing
+              setTimeout(() => {
+                printWindow.close();
+              }, 500);
+            }, 250);
+          }
+        } catch (error) {
+          this.logger.error('Error printing receipt:', error);
+        }
+      },
+      error: (err: any) => {
+        this.logger.error('Error fetching settings for receipt:', err);
+        // Use defaults if settings fetch fails
+        try {
+          const receiptContent = this.generateReceiptHtml(order, null);
+          const printWindow = window.open('', '_blank', 'width=300,height=600');
+          if (printWindow) {
+            printWindow.document.write(receiptContent);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+              printWindow.print();
+              // Auto-close after printing
+              setTimeout(() => {
+                printWindow.close();
+              }, 500);
+            }, 250);
+          }
+        } catch (error) {
+          this.logger.error('Error printing receipt:', error);
+        }
+      }
+    });
+  }
+
+  private generateReceiptHtml(order: OrderResponse, settings: Settings | null): string {
+    // Get brand info from settings or use defaults
+    const brandName = settings?.brandName || 'Fast Food Express';
+    const brandLocation = settings?.address || 'Gujranwala, Pakistan';
+    const brandLogoUrl = settings?.brandLogoUrl || null;
+    
+    let html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: 80mm auto;
+      margin: 5mm;
+    }
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 0;
+      padding: 10px;
+      width: 70mm;
+      font-size: 12px;
+    }
+    .header { text-align: center; margin-bottom: 15px; }
+    .logo-img { max-width: 60mm; max-height: 30mm; margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto; }
+    .logo { font-size: 18px; font-weight: bold; margin-bottom: 3px; }
+    .location { font-size: 11px; color: #666; }
+    .section { margin: 10px 0; font-size: 11px; }
+    .items { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 11px; }
+    .items th, .items td { padding: 4px 2px; text-align: left; border-bottom: 1px solid #ddd; }
+    .items th { background-color: #f5f5f5; font-size: 10px; }
+    .items td { font-size: 10px; }
+    .total { font-weight: bold; font-size: 12px; margin-top: 8px; }
+    .footer { text-align: center; margin-top: 15px; color: #666; font-size: 10px; }
+    @media print { 
+      body { margin: 0; padding: 5mm; }
+      .no-print { display: none; }
+    }
+    @media screen {
+      body { margin: 10px auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    ${brandLogoUrl ? `<img src="${this.getImageUrlForReceipt(brandLogoUrl)}" alt="Logo" class="logo-img" />` : ''}
+    <div class="logo">${brandName}</div>
+    <div class="location">${brandLocation}</div>
+  </div>
+  
+  <div class="section">
+    <strong>Order Number:</strong> ${order.orderNumber}<br>
+    <strong>Date:</strong> ${order.orderDate ? new Date(order.orderDate).toLocaleString() : ''}<br>
+    <strong>Type:</strong> ${order.orderType}<br>`;
+    
+    if (order.customerName) {
+      html += `<strong>Customer:</strong> ${order.customerName}<br>`;
+    }
+    if (order.customerPhone) {
+      html += `<strong>Phone:</strong> ${order.customerPhone}<br>`;
+    }
+    if (order.tableNumber) {
+      html += `<strong>Table:</strong> ${order.tableNumber}<br>`;
+    }
+    if (order.deliveryAddress) {
+      html += `<strong>Address:</strong> ${order.deliveryAddress}<br>`;
+    }
+    
+    html += `</div>
+  
+  <table class="items">
+    <tr><th>Item</th><th>Qty</th><th>Price</th></tr>`;
+    
+    if (order.items) {
+      order.items.forEach(item => {
+        html += `<tr>
+          <td>${item.itemNameEn}</td>
+          <td>${item.quantity}</td>
+          <td>${item.totalPrice.toFixed(2)}</td>
+        </tr>`;
+      });
+    }
+    
+    html += `</table>
+  
+  <div class="section">
+    <strong>Subtotal:</strong> ${(order.subtotal || 0).toFixed(2)}<br>`;
+    
+    if (order.discountAmount && order.discountAmount > 0) {
+      html += `<strong>Discount:</strong> ${order.discountAmount.toFixed(2)}<br>`;
+      if (order.voucherCode) {
+        html += `<strong>Voucher:</strong> ${order.voucherCode}<br>`;
+      }
+    }
+    
+    html += `<div class="total">Total: ${(order.totalAmount || 0).toFixed(2)}</div>
+    <strong>Payment:</strong> ${order.paymentMethod}<br>
+    <strong>Status:</strong> ${order.orderStatus}<br>
+  </div>
+  
+  <div class="footer">
+    Thank you for your order!
+  </div>
+</body>
+</html>`;
+    
+    return html;
+  }
+
+  private getImageUrlForReceipt(path: string | null | undefined): string {
+    if (!path) return '';
+    
+    // If path already starts with http:// or https://, return as is
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    
+    // Backend base URL (without /api suffix)
+    const backendBaseUrl = window.location.origin + '/fast-food-order-api';
+    
+    // If path starts with /api/files/serve, prepend backend URL
+    if (path.startsWith('/api/files/serve')) {
+      return `${backendBaseUrl}${path}`;
+    }
+    
+    // If path starts with /assets/images/, convert to API endpoint
+    if (path.startsWith('/assets/images/')) {
+      return `${backendBaseUrl}/api/files/serve?path=${encodeURIComponent(path)}`;
+    }
+    
+    // Default: assume it's an assets path
+    return `${backendBaseUrl}/api/files/serve?path=${encodeURIComponent(path)}`;
   }
 }

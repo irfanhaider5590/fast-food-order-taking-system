@@ -27,6 +27,45 @@
   box-shadow: var(--shadow-lg);
 }
 
+.license-warning {
+  margin-bottom: 30px;
+}
+
+.warning-card {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
+  border: 2px solid #ffc107;
+  border-radius: 12px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+.warning-card h2 {
+  color: #856404;
+  margin-bottom: 15px;
+}
+
+.warning-card p {
+  color: #856404;
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.warning-card .btn {
+  margin-top: 20px;
+  padding: 12px 30px;
+  font-size: 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.warning-card .btn:hover {
+  background-color: #0056b3;
+}
+
 .dashboard-card h3 {
   color: var(--primary-color);
   margin-bottom: 10px;
