@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "license")
+@Table(name = "licenses")
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,6 +19,10 @@ public class License {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_id")
+    private Shop shop;
 
     @Column(nullable = false, unique = true, length = 255)
     private String licenseKey;

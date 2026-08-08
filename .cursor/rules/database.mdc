@@ -1,0 +1,22 @@
+---
+description: Database and Flyway conventions
+globs: "**/db/migration/**,database/**"
+alwaysApply: false
+---
+
+# Database
+
+## Migrations
+- All schema changes go through Flyway under `src/main/resources/db/migration`
+- Do not rely on Hibernate `ddl-auto` for schema evolution (`none`)
+- Prefer additive migrations; rename tables carefully with data-preserving SQL
+
+## Naming
+- Tables: plural `snake_case` (`menu_items`, `licenses`, `shops`)
+- Columns: `snake_case`; bilingual fields `*_en` / `*_ur`
+- Always include `shop_id` on shop-owned business tables
+
+## Correctness
+- Persist order item add-ons and size price modifiers
+- Index hot paths: `orders(customer_phone)`, `orders(shop_id, status)`, `licenses(machine_id, is_active)`
+- Keep `order_item_add_ons` in sync with the JPA model — no orphan tables

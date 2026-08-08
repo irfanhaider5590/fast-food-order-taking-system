@@ -9,5 +9,7 @@ import java.util.Optional;
 @Repository
 public interface SettingsRepository extends JpaRepository<Settings, Long> {
     Optional<Settings> findFirstByOrderByIdAsc();
+
+    Optional<Settings> findFirstByShopIdOrderByIdAsc(Long shopId);
 }
 

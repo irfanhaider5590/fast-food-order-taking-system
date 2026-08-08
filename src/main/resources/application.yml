@@ -58,6 +58,13 @@ spring:
   sql:
     init:
       mode: never
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+  cache:
+    type: caffeine
 
 # Security Configuration
 security:
@@ -71,8 +78,10 @@ security:
 
 # Application Configuration
 app:
+  storage:
+    type: ${APP_STORAGE_TYPE:local}
   upload:
-    directory: ../frontend/src/assets/images
+    directory: ${APP_UPLOAD_DIRECTORY:uploads}
   brand:
     name: ${BRAND_NAME:Fast Food Express}
     location: ${BRAND_LOCATION:Gujranwala, Pakistan}

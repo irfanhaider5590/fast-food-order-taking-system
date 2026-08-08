@@ -1,17 +1,16 @@
-<div class="app-container">
-  <!-- License Warning Banner -->
-  @if (isLoggedIn() && licenseWarningMessage) {
+<div class="app-container" [class.pos-mode]="isPosMode()">
+  @if (isLoggedIn() && licenseWarningMessage && !isPosMode()) {
     <div class="license-warning-banner">
       <div class="container">
         <div class="warning-content">
-          <span class="warning-icon">⚠️</span>
           <span class="warning-text">{{ licenseWarningMessage }}</span>
-          <button class="btn btn-sm btn-outline-light ms-auto" (click)="dismissWarning()">✕</button>
+          <button class="btn btn-sm btn-outline-light ms-auto" (click)="dismissWarning()">Dismiss</button>
         </div>
       </div>
     </div>
   }
-  <header class="app-header">
+
+  <header class="app-header" [class.app-header-compact]="isPosMode()">
     <div class="container">
       <div class="header-content">
         <div class="brand-section">
@@ -21,26 +20,25 @@
           <h1>{{ brandName }}</h1>
         </div>
         <div class="header-actions">
-          <button class="btn btn-secondary" (click)="switchLanguage('en')">English</button>
-          <button class="btn btn-secondary" (click)="switchLanguage('ur')">اردو</button>
+          <button class="btn btn-secondary" (click)="switchLanguage('en')">EN</button>
+          <button class="btn btn-secondary" (click)="switchLanguage('ur')">UR</button>
           @if (isLoggedIn()) {
-            <button class="btn btn-home" (click)="goHome()" title="Go to Dashboard">
-              🏠 Home
-            </button>
-            <button class="btn btn-logout" (click)="logout()" title="Logout">
-              🚪 Logout
-            </button>
+            <button class="btn btn-home" (click)="goHome()">Home</button>
+            <button class="btn btn-logout" (click)="logout()">Logout</button>
           }
         </div>
       </div>
     </div>
   </header>
-  <main class="app-main">
-    <div class="container">
+
+  <main class="app-main" [class.app-main-pos]="isPosMode()">
+    <div class="container" [class.container-fluid-pos]="isPosMode()">
       <router-outlet></router-outlet>
     </div>
   </main>
-  <app-footer></app-footer>
+
+  @if (!isPosMode()) {
+    <app-footer></app-footer>
+  }
 </div>
 <app-notification></app-notification>
-

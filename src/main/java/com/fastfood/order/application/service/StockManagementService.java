@@ -24,9 +24,11 @@ public class StockManagementService {
     private final StockTransactionRepository stockTransactionRepository;
     private final MenuItemRepository menuItemRepository;
     private final OrderItemRepository orderItemRepository;
+    private final ShopContextService shopContextService;
 
     public List<StockItemResponse> getAllStockItems() {
-        return stockItemRepository.findAll().stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return stockItemRepository.findByShopIdOrderByNameEnAsc(shopId).stream()
                 .map(this::mapToStockItemResponse)
                 .collect(Collectors.toList());
     }
@@ -46,6 +48,7 @@ public class StockManagementService {
     @Transactional
     public StockItemResponse createStockItem(StockItemRequest request) {
         StockItem stockItem = StockItem.builder()
+                .shop(shopContextService.requireCurrentShop())
                 .nameEn(request.getNameEn())
                 .nameUr(request.getNameUr())
                 .descriptionEn(request.getDescriptionEn())

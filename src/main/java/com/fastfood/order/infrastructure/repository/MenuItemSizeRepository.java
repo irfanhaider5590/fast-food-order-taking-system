@@ -13,6 +13,8 @@ public interface MenuItemSizeRepository extends JpaRepository<MenuItemSize, Long
 
     List<MenuItemSize> findByMenuItemIdAndIsAvailableTrueOrderByDisplayOrderAsc(Long menuItemId);
 
+    java.util.Optional<MenuItemSize> findByMenuItemIdAndSizeCode(Long menuItemId, String sizeCode);
+
     void deleteByMenuItemId(Long menuItemId);
 }
 

@@ -2,9 +2,12 @@ package com.fastfood.order.application.service;
 
 import com.fastfood.order.application.dto.*;
 import com.fastfood.order.domain.entity.*;
+import com.fastfood.order.infrastructure.config.CacheConfig;
 import com.fastfood.order.infrastructure.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +23,9 @@ public class ComboService {
     private final ComboRepository comboRepository;
     private final ComboItemRepository comboItemRepository;
     private final MenuItemRepository menuItemRepository;
+    private final ShopContextService shopContextService;
 
+    @CacheEvict(value = CacheConfig.COMBOS, allEntries = true)
     public ComboResponse createCombo(ComboRequest request) {
         log.info("Creating combo: {}", request.getNameEn());
         
@@ -31,6 +36,7 @@ public class ComboService {
         return getComboById(combo.getId());
     }
 
+    @CacheEvict(value = CacheConfig.COMBOS, allEntries = true)
     public ComboResponse updateCombo(Long id, ComboRequest request) {
         log.info("Updating combo with ID: {}", id);
         
@@ -62,19 +68,25 @@ public class ComboService {
         return getAllCombos();
     }
 
+    @Cacheable(value = CacheConfig.COMBOS, key = "'all-' + @shopContextService.requireCurrentShopId()")
     public List<ComboResponse> getAllCombos() {
-        return comboRepository.findAll().stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return comboRepository.findByShopIdOrderByDisplayOrderAsc(shopId).stream()
                 .map(combo -> getComboById(combo.getId()))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.COMBOS, key = "'available-' + @shopContextService.requireCurrentShopId()")
     public List<ComboResponse> getAvailableCombos() {
-        return comboRepository.findByIsAvailableTrueOrderByDisplayOrderAsc().stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return comboRepository.findByShopIdOrderByDisplayOrderAsc(shopId).stream()
+                .filter(c -> Boolean.TRUE.equals(c.getIsAvailable()))
                 .map(combo -> getComboById(combo.getId()))
                 .collect(Collectors.toList());
     }
 
+    @CacheEvict(value = CacheConfig.COMBOS, allEntries = true)
     public void deleteCombo(Long id) {
         log.info("Deleting combo with ID: {}", id);
         validateComboExists(id);
@@ -97,6 +109,7 @@ public class ComboService {
 
     private Combo buildCombo(ComboRequest request) {
         return Combo.builder()
+                .shop(shopContextService.requireCurrentShop())
                 .nameEn(request.getNameEn())
                 .nameUr(request.getNameUr())
                 .descriptionEn(request.getDescriptionEn())

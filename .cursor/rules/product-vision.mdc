@@ -1,0 +1,21 @@
+---
+description: Product vision for the generic multi-shop order platform
+alwaysApply: true
+---
+
+# Product Vision
+
+This repo is a **generic shop order platform** (not a single hard-coded restaurant brand).
+
+## Surfaces
+- **Now:** Staff POS + admin (Spring Boot API + Angular desktop SPA)
+- **Later:** Customer website + tablet/phone app (Android/iOS via Capacitor) — separate shells, do not reuse admin/POS UI
+
+## Core product rules
+- Multi-shop ready: data is scoped by `shop_id` (even if one shop is seeded today)
+- Features in scope long-term: order taking, delivery status, customer accounts, loyalty points, completion notify
+- Keep POS simple, fast, and touch-friendly — no chrome clutter on order-taking
+- Do not invent microservices or full Clean Architecture rewrites unless asked
+
+## Commits
+- Do not create git commits unless the user explicitly asks

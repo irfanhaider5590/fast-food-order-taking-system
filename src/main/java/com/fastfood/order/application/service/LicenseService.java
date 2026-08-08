@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -141,7 +143,7 @@ public class LicenseService {
         }
 
         // Check license for this server
-        Optional<License> licenseOpt = licenseRepository.findByMachineIdAndIsActiveTrue(serverId);
+        Optional<License> licenseOpt = findPrimaryActiveLicense(serverId);
         if (licenseOpt.isEmpty()) {
             log.warn("No active license found for server: {}", serverId);
             return false;
@@ -182,76 +184,79 @@ public class LicenseService {
         }
         
         // Check if there's an existing active license for this server
-        Optional<License> existingLicenseOpt = licenseRepository.findByMachineIdAndIsActiveTrue(serverId);
+        Optional<License> existingLicenseOpt = findPrimaryActiveLicense(serverId);
         
-        if (existingLicenseOpt.isPresent()) {
-            // Extend existing license
+        if (existingLicenseOpt.isPresent() && !existingLicenseOpt.get().getId().equals(newLicense.getId())) {
+            // Extend existing primary license; mark renewal key as used/inactive
             License existingLicense = existingLicenseOpt.get();
             
-            // If new license is already activated on this server, just return existing
-            if (newLicense.getActivatedAt() != null && newLicense.getMachineId() != null && newLicense.getMachineId().equals(serverId)) {
-                log.info("License {} is already activated on this server, extending existing license", licenseKey);
-                // Still extend the existing license
-            }
-            
-            // Calculate new expiry date by adding days to existing expiry (or current date if expired)
             LocalDateTime currentExpiry = existingLicense.getExpiresAt();
             LocalDateTime baseDate = (currentExpiry != null && currentExpiry.isAfter(LocalDateTime.now())) 
                     ? currentExpiry 
                     : LocalDateTime.now();
             
             if (newLicense.getLicenseType() == License.LicenseType.LIFETIME) {
-                // Lifetime license - set to never expire
                 existingLicense.setExpiresAt(null);
                 existingLicense.setLicenseType(License.LicenseType.LIFETIME);
             } else {
-                // Add new license days to existing expiry
                 existingLicense.setExpiresAt(baseDate.plusDays(newLicense.getDurationDays()));
             }
             
             existingLicense.setIsActive(true);
             existingLicense.setUpdatedAt(LocalDateTime.now());
             
-            // Mark new license as used (but keep it active for tracking)
+            // Consumed renewal key — keep history but do NOT keep a second active row
             newLicense.setMachineId(serverId);
             newLicense.setActivatedAt(LocalDateTime.now());
-            newLicense.setIsActive(true);
-            // Set expiry same as extended license for consistency
-            if (newLicense.getLicenseType() == License.LicenseType.LIFETIME) {
-                newLicense.setExpiresAt(null);
-            } else {
-                newLicense.setExpiresAt(existingLicense.getExpiresAt());
-            }
+            newLicense.setIsActive(false);
+            newLicense.setExpiresAt(existingLicense.getExpiresAt());
+            newLicense.setUpdatedAt(LocalDateTime.now());
             
             licenseRepository.save(newLicense);
             License saved = licenseRepository.save(existingLicense);
+            licenseRepository.deactivateOtherActiveLicenses(serverId, saved.getId());
             
             log.info("License extended: {} days added to existing license for server: {}, new expiry: {}", 
                     newLicense.getDurationDays(), serverId, saved.getExpiresAt());
             
             return saved;
         } else {
-            // First time activation - activate the new license
+            // First time activation (or re-activating the same key)
             if (newLicense.getActivatedAt() != null && newLicense.getMachineId() != null && !newLicense.getMachineId().equals(serverId)) {
                 throw new RuntimeException("License is already activated on another server");
             }
 
-            // Activate license for this server (shared by all users)
             newLicense.setMachineId(serverId);
             newLicense.setActivatedAt(LocalDateTime.now());
-            // Lifetime licenses don't have expiration date
             if (newLicense.getLicenseType() == License.LicenseType.LIFETIME) {
-                newLicense.setExpiresAt(null); // Never expires
-            } else {
+                newLicense.setExpiresAt(null);
+            } else if (newLicense.getExpiresAt() == null || newLicense.isExpired()) {
                 newLicense.setExpiresAt(LocalDateTime.now().plusDays(newLicense.getDurationDays()));
             }
             newLicense.setIsActive(true);
+            newLicense.setUpdatedAt(LocalDateTime.now());
 
             License saved = licenseRepository.save(newLicense);
+            licenseRepository.deactivateOtherActiveLicenses(serverId, saved.getId());
             log.info("License activated: {} for server: {} (shared by all users), expires at: {}", licenseKey, serverId, saved.getExpiresAt());
             
             return saved;
         }
+    }
+
+    /**
+     * One machine may historically have multiple active rows; pick the best one.
+     */
+    private Optional<License> findPrimaryActiveLicense(String serverId) {
+        List<License> active = licenseRepository.findByMachineIdAndIsActiveTrueOrderByExpiresAtDesc(serverId);
+        if (active.isEmpty()) {
+            return Optional.empty();
+        }
+        // Lifetime (null expiry) wins; otherwise latest expiry
+        return active.stream()
+                .max(Comparator
+                        .comparing((License l) -> l.getExpiresAt() == null)
+                        .thenComparing(l -> l.getExpiresAt() != null ? l.getExpiresAt() : LocalDateTime.MIN));
     }
 
     /**
@@ -272,7 +277,7 @@ public class LicenseService {
                     .build();
         }
 
-        Optional<License> licenseOpt = licenseRepository.findByMachineIdAndIsActiveTrue(serverId);
+        Optional<License> licenseOpt = findPrimaryActiveLicense(serverId);
         if (licenseOpt.isEmpty()) {
             return LicenseStatus.builder()
                     .isActivated(true)

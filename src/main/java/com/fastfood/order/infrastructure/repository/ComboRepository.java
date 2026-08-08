@@ -10,5 +10,7 @@ import java.util.List;
 public interface ComboRepository extends JpaRepository<Combo, Long> {
 
     List<Combo> findByIsAvailableTrueOrderByDisplayOrderAsc();
+
+    List<Combo> findByShopIdOrderByDisplayOrderAsc(Long shopId);
 }
 

@@ -26,6 +26,7 @@ public class UserManagementService {
     private final RoleRepository roleRepository;
     private final BranchRepository branchRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ShopContextService shopContextService;
     
     @Transactional
     public UserResponse createUser(UserRequest request, Long currentUserId) {
@@ -64,6 +65,7 @@ public class UserManagementService {
                 .fullName(request.getFullName())
                 .phone(request.getPhone())
                 .role(role)
+                .shop(shopContextService.requireCurrentShop())
                 .branch(branch)
                 .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .createdBy(currentUser)
@@ -79,7 +81,8 @@ public class UserManagementService {
     @Transactional(readOnly = true)
     public List<UserResponse> getAllUsers() {
         log.info("Fetching all users");
-        return userRepository.findAll().stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return userRepository.findByShopId(shopId).stream()
                 .map(this::mapToUserResponse)
                 .collect(Collectors.toList());
     }

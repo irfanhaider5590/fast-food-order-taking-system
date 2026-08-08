@@ -1,0 +1,23 @@
+---
+description: Angular POS/admin frontend conventions
+globs: "frontend/**/*"
+alwaysApply: false
+---
+
+# Frontend (Angular POS)
+
+## UX
+- POS order-taking: minimal chrome, large touch targets, fast path to cart
+- Prefer toasts over `alert()` / `confirm()`
+- One design token system (CSS variables); avoid mixed color themes per screen
+- Customer website/mobile apps are separate shells — do not extend this admin UI for customers
+
+## API
+- Always call APIs via `environment.apiUrl` — never hardcode `localhost:8080`
+- Auth interceptor attaches Bearer token; avoid duplicating headers unless necessary
+- Protect staff routes with `AuthGuard`; admin routes with `AdminGuard`
+
+## Code style
+- Prefer standalone components
+- Keep order-taking focused: search, sizes, add-ons, cart, place order
+- Branch/payment defaults come from logged-in user / settings, not magic numbers in templates

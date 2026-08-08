@@ -50,6 +50,8 @@ public class AuthService {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole().getName())
+                .shopId(user.getShop() != null ? user.getShop().getId() : 1L)
+                .shopName(user.getShop() != null ? user.getShop().getName() : "Default Shop")
                 .branchId(user.getBranch() != null ? user.getBranch().getId() : null)
                 .branchName(user.getBranch() != null ? user.getBranch().getName() : null)
                 .build();

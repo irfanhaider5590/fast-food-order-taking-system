@@ -1,0 +1,31 @@
+---
+description: Spring Boot backend conventions
+globs: "**/*.java"
+alwaysApply: false
+---
+
+# Backend (Spring Boot)
+
+## Layering
+- Controllers stay thin; business logic in `application/service`
+- Do not inject repositories into controllers except trivial admin read-only cases already present
+- Prefer typed API errors over bare `RuntimeException` for new code
+
+## Multi-shop
+- Catalog, stock, settings, vouchers, orders, users, branches, licenses are shop-scoped
+- Resolve shop from the authenticated user; never trust client `shopId` alone for writes
+- Default seeded shop must keep single-shop installs working
+
+## Caching
+- Use Spring Cache + Caffeine for menu/settings/active vouchers
+- Evict on every related create/update/delete
+- Do not add Redis unless multi-instance deploy is required
+
+## Storage
+- Upload via `StorageService` only — never write into `frontend/src/assets`
+- Keep S3 implementation ready; local disk is default for single-machine POS
+
+## Security
+- No default secrets in committed prod config; env vars for JWT/DB/API keys
+- Do not expose password-hash utilities publicly
+- Staff APIs require authentication

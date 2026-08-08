@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { RouterOutlet, Router } from '@angular/router';
+import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { NotificationComponent } from './shared/components/notification/notification.component';
@@ -12,7 +12,7 @@ import { NotificationService } from './services/notification.service';
 import { StockWarning } from './models/stock.models';
 import { LicenseService } from './services/license.service';
 import { LicenseGuardService } from './services/license-guard.service';
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, filter } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { environment } from '../environments/environment';
 
@@ -29,10 +29,12 @@ export class AppComponent implements OnInit, OnDestroy {
   brandName: string = 'Fast Food Order System';
   brandLogoUrl: string | null = null;
   licenseWarningMessage: string | null = null; // Banner warning message
+  posMode = false;
   private settingsSubscription?: Subscription;
   private stockWarningSubscription?: Subscription;
   private licenseWarningSubscription?: Subscription;
   private licenseStatusSubscription?: Subscription;
+  private routerSubscription?: Subscription;
   private lastWarningCheck: Date | null = null;
   private lastLicenseWarningDay: number | null = null;
 
@@ -51,6 +53,16 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.posMode = this.router.url.startsWith('/orders');
+    this.routerSubscription = this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe(e => {
+        this.posMode = e.urlAfterRedirects.startsWith('/orders');
+        if (this.isLoggedIn() && !this.brandLogoUrl) {
+          this.loadSettings();
+        }
+      });
+
     this.loadSettings();
     this.startStockWarningCheck();
     this.startLicenseWarningCheck();
@@ -82,6 +94,9 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (this.licenseStatusSubscription) {
       this.licenseStatusSubscription.unsubscribe();
+    }
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
     }
   }
 
@@ -317,6 +332,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   isLoggedIn(): boolean {
     return !!localStorage.getItem('accessToken');
+  }
+
+  isPosMode(): boolean {
+    return this.posMode;
   }
 }
 

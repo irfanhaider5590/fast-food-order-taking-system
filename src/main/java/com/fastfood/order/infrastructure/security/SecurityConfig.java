@@ -56,13 +56,14 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                        .authorizeHttpRequests(auth -> auth
-                               .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow OPTIONS requests for CORS preflight
-                               .requestMatchers("/api/auth/**", "/api/public/**", "/actuator/health").permitAll()
-                               .requestMatchers("/api/auth/password-reset/reset-admin").permitAll() // Emergency admin password reset (protected by secret key)
-                               .requestMatchers("/api/files/serve/**").permitAll() // Allow public access to serve images
-                               .requestMatchers("/api/license/generate").permitAll() // License generation endpoint (protected by API key)
-                               .requestMatchers("/api/license/status", "/api/license/machine-id").permitAll() // License status check (public for initial validation)
-                               .requestMatchers("/api/files/upload", "/api/files/delete").authenticated() // File upload/delete requires authentication
+                               .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                               .requestMatchers("/api/auth/login", "/api/auth/password-reset/**").permitAll()
+                               .requestMatchers("/actuator/health").permitAll()
+                               .requestMatchers("/api/files/serve", "/api/files/serve/**").permitAll()
+                               .requestMatchers("/api/license/generate").permitAll()
+                               .requestMatchers("/api/license/status", "/api/license/machine-id").permitAll()
+                               .requestMatchers("/api/public/**").hasRole("ADMIN")
+                               .requestMatchers("/api/files/upload", "/api/files/delete").authenticated()
                                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                                .requestMatchers("/api/branch-manager/**").hasAnyRole("ADMIN", "BRANCH_MANAGER")
                                .anyRequest().authenticated()

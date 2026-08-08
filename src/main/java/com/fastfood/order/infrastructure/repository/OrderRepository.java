@@ -41,5 +41,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Order> findAllByOrderByOrderDateDesc();
     
     List<Order> findByOrderStatusOrderByOrderDateDesc(Order.OrderStatus orderStatus);
+
+    List<Order> findByShopIdAndOrderStatusOrderByOrderDateDesc(Long shopId, Order.OrderStatus orderStatus);
 }
 

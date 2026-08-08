@@ -3,9 +3,12 @@ package com.fastfood.order.application.service;
 import com.fastfood.order.application.dto.MenuCategoryRequest;
 import com.fastfood.order.application.dto.MenuCategoryResponse;
 import com.fastfood.order.domain.entity.MenuCategory;
+import com.fastfood.order.infrastructure.config.CacheConfig;
 import com.fastfood.order.infrastructure.repository.MenuCategoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +22,14 @@ import java.util.stream.Collectors;
 public class MenuCategoryService {
 
     private final MenuCategoryRepository categoryRepository;
+    private final ShopContextService shopContextService;
 
+    @CacheEvict(value = CacheConfig.MENU_CATEGORIES, allEntries = true)
     public MenuCategoryResponse createCategory(MenuCategoryRequest request) {
         log.info("Creating menu category: {}", request.getNameEn());
-        
+
         MenuCategory category = MenuCategory.builder()
+                .shop(shopContextService.requireCurrentShop())
                 .nameEn(request.getNameEn())
                 .nameUr(request.getNameUr())
                 .descriptionEn(request.getDescriptionEn())
@@ -37,9 +43,10 @@ public class MenuCategoryService {
         return mapToResponse(category);
     }
 
+    @CacheEvict(value = CacheConfig.MENU_CATEGORIES, allEntries = true)
     public MenuCategoryResponse updateCategory(Long id, MenuCategoryRequest request) {
         log.info("Updating menu category with ID: {}", id);
-        
+
         MenuCategory category = categoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Menu category not found with ID: " + id));
 
@@ -68,11 +75,6 @@ public class MenuCategoryService {
         return mapToResponse(category);
     }
 
-    /**
-     * Get all categories, optionally filtered by active status
-     * @param active Optional filter for active categories only
-     * @return List of categories
-     */
     @Transactional(readOnly = true)
     public List<MenuCategoryResponse> getAllCategories(Boolean active) {
         if (active != null && active) {
@@ -82,19 +84,24 @@ public class MenuCategoryService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.MENU_CATEGORIES, key = "'all-' + @shopContextService.requireCurrentShopId()")
     public List<MenuCategoryResponse> getAllCategories() {
-        return categoryRepository.findAll().stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return categoryRepository.findByShopIdOrderByDisplayOrderAsc(shopId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.MENU_CATEGORIES, key = "'active-' + @shopContextService.requireCurrentShopId()")
     public List<MenuCategoryResponse> getActiveCategories() {
-        return categoryRepository.findByIsActiveTrueOrderByDisplayOrderAsc().stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return categoryRepository.findByShopIdAndIsActiveTrueOrderByDisplayOrderAsc(shopId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    @CacheEvict(value = CacheConfig.MENU_CATEGORIES, allEntries = true)
     public void deleteCategory(Long id) {
         log.info("Deleting menu category with ID: {}", id);
         if (!categoryRepository.existsById(id)) {
@@ -118,4 +125,3 @@ public class MenuCategoryService {
                 .build();
     }
 }
-

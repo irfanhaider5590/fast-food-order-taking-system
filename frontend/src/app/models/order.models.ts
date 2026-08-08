@@ -30,7 +30,7 @@ export interface OrderRequest {
   orderType: OrderType;
   customerName: string;
   customerPhone?: string | null;
-  customerAddress?: string | null;
+  deliveryAddress?: string | null;
   tableNumber?: string | null;
   paymentMethod: PaymentMethod;
   voucherCode?: string | null;
@@ -40,7 +40,7 @@ export interface OrderRequest {
 export interface OrderItemRequest {
   menuItemId: number;
   quantity: number;
-  size?: string | null;
+  sizeCode?: string | null;
   addOnIds?: number[];
 }
 

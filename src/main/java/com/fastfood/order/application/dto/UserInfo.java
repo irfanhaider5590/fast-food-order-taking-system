@@ -16,6 +16,8 @@ public class UserInfo {
     private String email;
     private String fullName;
     private String role;
+    private Long shopId;
+    private String shopName;
     private Long branchId;
     private String branchName;
 }

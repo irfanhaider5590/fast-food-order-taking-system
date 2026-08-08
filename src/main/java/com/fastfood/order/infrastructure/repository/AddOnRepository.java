@@ -10,5 +10,7 @@ import java.util.List;
 public interface AddOnRepository extends JpaRepository<AddOn, Long> {
 
     List<AddOn> findByIsAvailableTrueOrderByDisplayOrderAsc();
+
+    List<AddOn> findByShopIdOrderByDisplayOrderAsc(Long shopId);
 }
 

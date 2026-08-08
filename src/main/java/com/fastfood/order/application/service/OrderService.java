@@ -1,10 +1,12 @@
 package com.fastfood.order.application.service;
 
+import com.fastfood.order.application.dto.AddOnResponse;
+import com.fastfood.order.application.dto.OrderItemRequest;
+import com.fastfood.order.application.dto.OrderItemResponse;
 import com.fastfood.order.application.dto.OrderRequest;
 import com.fastfood.order.application.dto.OrderResponse;
-import com.fastfood.order.application.dto.OrderItemResponse;
-import com.fastfood.order.application.mapper.OrderMapper;
 import com.fastfood.order.application.mapper.OrderItemMapper;
+import com.fastfood.order.application.mapper.OrderMapper;
 import com.fastfood.order.domain.entity.*;
 import com.fastfood.order.infrastructure.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +23,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -35,43 +39,44 @@ public class OrderService {
     private final ComboRepository comboRepository;
     private final VoucherRepository voucherRepository;
     private final OrderItemRepository orderItemRepository;
+    private final OrderItemAddOnRepository orderItemAddOnRepository;
     private final AddOnRepository addOnRepository;
+    private final MenuItemSizeRepository menuItemSizeRepository;
     private final ReceiptPrintService receiptPrintService;
     private final StockManagementService stockManagementService;
     private final StockWarningService stockWarningService;
+    private final ShopContextService shopContextService;
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
 
     @Transactional
     public OrderResponse createOrder(OrderRequest request, Long userId) {
         log.info("Creating order for branch ID: {}", request.getBranchId());
-        
+
+        Shop shop = shopContextService.requireCurrentShop();
         Branch branch = findBranchById(request.getBranchId());
         String orderNumber = generateOrderNumber();
-        Order order = buildOrder(request, branch, orderNumber);
-        
+        Order order = buildOrder(request, branch, orderNumber, shop);
+
         List<OrderItem> orderItems = buildOrderItems(request.getItems(), order);
         BigDecimal subtotal = calculateSubtotal(orderItems);
         order.setSubtotal(subtotal);
-        
-        BigDecimal discountAmount = applyVoucherDiscount(request.getVoucherCode(), subtotal, order);
+
+        BigDecimal discountAmount = applyVoucherDiscount(request.getVoucherCode(), subtotal, order, shop.getId());
         order.setDiscountAmount(discountAmount);
         order.setTotalAmount(subtotal.subtract(discountAmount));
-        
+
         Order savedOrder = orderRepository.save(order);
         saveOrderItems(savedOrder, orderItems);
-        
+
         log.info("Order created successfully: {}", savedOrder.getOrderNumber());
-        
-        // Deduct stock for order items
+
         try {
             stockManagementService.deductStockForOrder(savedOrder);
         } catch (Exception e) {
             log.error("Error deducting stock for order: {}", savedOrder.getOrderNumber(), e);
-            // Don't fail the order if stock deduction fails
         }
-        
-        // Check for stock warnings after deduction
+
         List<com.fastfood.order.application.dto.StockWarningResponse> stockWarnings = null;
         try {
             stockWarnings = stockWarningService.checkStockWarningsOnOrder();
@@ -80,38 +85,34 @@ public class OrderService {
             }
         } catch (Exception e) {
             log.error("Error checking stock warnings for order: {}", savedOrder.getOrderNumber(), e);
-            // Don't fail the order if warning check fails
         }
-        
+
         OrderResponse response = mapToOrderResponse(savedOrder);
         response.setStockWarnings(stockWarnings);
-        
-        // Print receipt if enabled
+
         try {
             receiptPrintService.printReceipt(response);
         } catch (Exception e) {
             log.error("Error printing receipt for order: {}", savedOrder.getOrderNumber(), e);
-            // Don't fail the order if printing fails
         }
-        
+
         return response;
     }
 
-    // Private helper methods
-    
     private Branch findBranchById(Long branchId) {
         return branchRepository.findById(branchId)
                 .orElseThrow(() -> new RuntimeException("Branch not found"));
     }
 
     private String generateOrderNumber() {
-        return "ORD-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + 
-               "-" + String.format("%04d", (int)(Math.random() * 10000));
+        return "ORD-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) +
+               "-" + String.format("%04d", ThreadLocalRandom.current().nextInt(10000));
     }
 
-    private Order buildOrder(OrderRequest request, Branch branch, String orderNumber) {
+    private Order buildOrder(OrderRequest request, Branch branch, String orderNumber, Shop shop) {
         return Order.builder()
                 .orderNumber(orderNumber)
+                .shop(shop)
                 .branch(branch)
                 .orderType(request.getOrderType())
                 .tableNumber(request.getTableNumber())
@@ -126,38 +127,73 @@ public class OrderService {
                 .build();
     }
 
-    private List<OrderItem> buildOrderItems(List<com.fastfood.order.application.dto.OrderItemRequest> itemRequests, Order order) {
+    private List<OrderItem> buildOrderItems(List<OrderItemRequest> itemRequests, Order order) {
         return itemRequests.stream()
                 .map(itemRequest -> createOrderItem(itemRequest, order))
                 .collect(Collectors.toList());
     }
 
-    private OrderItem createOrderItem(com.fastfood.order.application.dto.OrderItemRequest itemRequest, Order order) {
+    private OrderItem createOrderItem(OrderItemRequest itemRequest, Order order) {
         ItemDetails itemDetails = getItemDetails(itemRequest);
         BigDecimal unitPrice = itemDetails.getUnitPrice();
-        
-        // Apply size modifier if applicable
+        String sizeNameEn = null;
+        String sizeNameUr = null;
+
         if (itemRequest.getSizeCode() != null && itemDetails.getMenuItem() != null) {
-            // Size modifier logic would go here if needed
+            MenuItemSize size = menuItemSizeRepository
+                    .findByMenuItemIdAndSizeCode(itemDetails.getMenuItem().getId(), itemRequest.getSizeCode())
+                    .orElseThrow(() -> new RuntimeException("Size not found: " + itemRequest.getSizeCode()));
+            unitPrice = unitPrice.add(size.getPriceModifier() != null ? size.getPriceModifier() : BigDecimal.ZERO);
+            sizeNameEn = size.getSizeNameEn();
+            sizeNameUr = size.getSizeNameUr();
         }
-        
+
+        List<OrderItemAddOn> pendingAddOns = new ArrayList<>();
+        BigDecimal addOnUnitTotal = BigDecimal.ZERO;
+        if (itemRequest.getAddOnIds() != null && !itemRequest.getAddOnIds().isEmpty()) {
+            for (Long addOnId : itemRequest.getAddOnIds()) {
+                AddOn addOn = addOnRepository.findById(addOnId)
+                        .orElseThrow(() -> new RuntimeException("Add-on not found: " + addOnId));
+                BigDecimal addOnPrice = addOn.getPrice() != null ? addOn.getPrice() : BigDecimal.ZERO;
+                addOnUnitTotal = addOnUnitTotal.add(addOnPrice);
+                pendingAddOns.add(OrderItemAddOn.builder()
+                        .addOn(addOn)
+                        .addOnNameEn(addOn.getNameEn())
+                        .addOnNameUr(addOn.getNameUr())
+                        .price(addOnPrice)
+                        .quantity(1)
+                        .build());
+            }
+        }
+
+        unitPrice = unitPrice.add(addOnUnitTotal);
         BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
-        
-        return OrderItem.builder()
+
+        OrderItem orderItem = OrderItem.builder()
                 .order(order)
                 .menuItem(itemDetails.getMenuItem())
                 .combo(itemDetails.getCombo())
                 .itemNameEn(itemDetails.getItemNameEn())
                 .itemNameUr(itemDetails.getItemNameUr())
                 .sizeCode(itemRequest.getSizeCode())
+                .sizeNameEn(sizeNameEn)
+                .sizeNameUr(sizeNameUr)
                 .quantity(itemRequest.getQuantity())
                 .unitPrice(unitPrice)
                 .totalPrice(totalPrice)
                 .notes(itemRequest.getNotes())
+                .addOns(new ArrayList<>())
                 .build();
+
+        for (OrderItemAddOn addOn : pendingAddOns) {
+            addOn.setOrderItem(orderItem);
+            orderItem.getAddOns().add(addOn);
+        }
+
+        return orderItem;
     }
 
-    private ItemDetails getItemDetails(com.fastfood.order.application.dto.OrderItemRequest itemRequest) {
+    private ItemDetails getItemDetails(OrderItemRequest itemRequest) {
         if (itemRequest.getMenuItemId() != null) {
             MenuItem menuItem = menuItemRepository.findById(itemRequest.getMenuItemId())
                     .orElseThrow(() -> new RuntimeException("Menu item not found"));
@@ -188,35 +224,38 @@ public class OrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal applyVoucherDiscount(String voucherCode, BigDecimal subtotal, Order order) {
+    private BigDecimal applyVoucherDiscount(String voucherCode, BigDecimal subtotal, Order order, Long shopId) {
         if (voucherCode == null || voucherCode.isEmpty()) {
             return BigDecimal.ZERO;
         }
-        
-        Voucher voucher = findValidVoucher(voucherCode);
+
+        Voucher voucher = findValidVoucher(voucherCode, shopId);
         if (voucher == null) {
             log.warn("Invalid or expired voucher code: {}", voucherCode);
             return BigDecimal.ZERO;
         }
-        
+
         if (voucher.getUsedCount() >= (voucher.getUsageLimit() != null ? voucher.getUsageLimit() : Integer.MAX_VALUE)) {
             log.warn("Voucher usage limit exceeded: {}", voucherCode);
             return BigDecimal.ZERO;
         }
-        
+
         BigDecimal discountAmount = calculateDiscount(subtotal, voucher);
         order.setVoucher(voucher);
         order.setVoucherCode(voucher.getCode());
         voucher.setUsedCount(voucher.getUsedCount() + 1);
         voucherRepository.save(voucher);
-        
+
         return discountAmount;
     }
 
-    private Voucher findValidVoucher(String voucherCode) {
-        return voucherRepository.findByCodeAndIsActiveTrueAndValidFromBeforeAndValidUntilAfter(
-                voucherCode, LocalDateTime.now(), LocalDateTime.now())
-                .orElse(null);
+    private Voucher findValidVoucher(String voucherCode, Long shopId) {
+        LocalDateTime now = LocalDateTime.now();
+        return voucherRepository
+                .findByShopIdAndCodeAndIsActiveTrueAndValidFromBeforeAndValidUntilAfter(shopId, voucherCode, now, now)
+                .orElseGet(() -> voucherRepository
+                        .findByCodeAndIsActiveTrueAndValidFromBeforeAndValidUntilAfter(voucherCode, now, now)
+                        .orElse(null));
     }
 
     private BigDecimal calculateDiscount(BigDecimal subtotal, Voucher voucher) {
@@ -234,6 +273,7 @@ public class OrderService {
     private void saveOrderItems(Order savedOrder, List<OrderItem> orderItems) {
         orderItems.forEach(orderItem -> {
             orderItem.setOrder(savedOrder);
+            // Cascade persists order_item_add_ons via OrderItem.addOns
             orderItemRepository.save(orderItem);
         });
     }
@@ -241,16 +281,14 @@ public class OrderService {
     public List<OrderResponse> getAllOrders() {
         log.info("Fetching pending orders from database");
         try {
-            // Only fetch PENDING orders for recent orders screen
-            List<Order> orders = orderRepository.findByOrderStatusOrderByOrderDateDesc(Order.OrderStatus.PENDING);
+            Long shopId = shopContextService.requireCurrentShopId();
+            List<Order> orders = orderRepository.findByShopIdAndOrderStatusOrderByOrderDateDesc(
+                    shopId, Order.OrderStatus.PENDING);
             log.info("Found {} pending orders in database", orders.size());
-            
-            List<OrderResponse> orderResponses = orders.stream()
+
+            return orders.stream()
                     .map(this::mapToOrderResponse)
                     .collect(Collectors.toList());
-            
-            log.debug("Mapped {} orders to response DTOs", orderResponses.size());
-            return orderResponses;
         } catch (Exception e) {
             log.error("Error fetching orders from database", e);
             throw e;
@@ -260,21 +298,20 @@ public class OrderService {
     @Transactional
     public OrderResponse updateOrderStatus(Long orderId, Order.OrderStatus newStatus, Long userId) {
         log.info("Updating order {} status to {}", orderId, newStatus);
-        
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
-        
+
         Order.OrderStatus oldStatus = order.getOrderStatus();
         order.setOrderStatus(newStatus);
-        
-        // Set completedAt timestamp if status is COMPLETED
+
         if (newStatus == Order.OrderStatus.COMPLETED && oldStatus != Order.OrderStatus.COMPLETED) {
             order.setCompletedAt(LocalDateTime.now());
         }
-        
+
         Order updatedOrder = orderRepository.save(order);
         log.info("Order {} status updated from {} to {}", orderId, oldStatus, newStatus);
-        
+
         return mapToOrderResponse(updatedOrder);
     }
 
@@ -282,91 +319,97 @@ public class OrderService {
                                            LocalDate startDate, LocalDate endDate, Long branchId, Pageable pageable) {
         log.info("Searching orders with filters: orderNumber={}, customerName={}, customerPhone={}, startDate={}, endDate={}, branchId={}",
                 orderNumber, customerName, customerPhone, startDate, endDate, branchId);
-        
-        Specification<Order> spec = Specification.where(null);
+
+        Long shopId = shopContextService.requireCurrentShopId();
+        Specification<Order> spec = (root, query, cb) -> cb.equal(root.get("shop").get("id"), shopId);
         boolean hasFilters = false;
-        
+
         if (orderNumber != null && !orderNumber.isEmpty()) {
-            spec = spec.and((root, query, cb) -> 
+            spec = spec.and((root, query, cb) ->
                 cb.like(cb.lower(root.get("orderNumber")), "%" + orderNumber.toLowerCase() + "%"));
             hasFilters = true;
         }
-        
+
         if (customerName != null && !customerName.isEmpty()) {
-            spec = spec.and((root, query, cb) -> 
+            spec = spec.and((root, query, cb) ->
                 cb.like(cb.lower(root.get("customerName")), "%" + customerName.toLowerCase() + "%"));
             hasFilters = true;
         }
-        
+
         if (customerPhone != null && !customerPhone.isEmpty()) {
-            spec = spec.and((root, query, cb) -> 
+            spec = spec.and((root, query, cb) ->
                 cb.like(root.get("customerPhone"), "%" + customerPhone + "%"));
             hasFilters = true;
         }
-        
+
         if (startDate != null) {
             LocalDateTime startDateTime = startDate.atStartOfDay();
-            spec = spec.and((root, query, cb) -> 
+            spec = spec.and((root, query, cb) ->
                 cb.greaterThanOrEqualTo(root.get("orderDate"), startDateTime));
             hasFilters = true;
         }
-        
+
         if (endDate != null) {
             LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
-            spec = spec.and((root, query, cb) -> 
+            spec = spec.and((root, query, cb) ->
                 cb.lessThanOrEqualTo(root.get("orderDate"), endDateTime));
             hasFilters = true;
         }
-        
+
         if (branchId != null) {
-            spec = spec.and((root, query, cb) -> 
+            spec = spec.and((root, query, cb) ->
                 cb.equal(root.get("branch").get("id"), branchId));
         }
-        
-        // Always sort by orderDate desc first
+
         Sort sort = Sort.by(Sort.Order.desc("orderDate"));
         Pageable finalPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
-        
+
         Page<Order> orders = orderRepository.findAll(spec, finalPageable);
-        
-        // If no filters applied, sort results to put PENDING orders first, then by date desc
+
         if (!hasFilters) {
             List<OrderResponse> content = orders.getContent().stream()
                     .map(this::mapToOrderResponse)
                     .sorted((a, b) -> {
-                        // PENDING orders first
                         boolean aIsPending = a.getOrderStatus() == Order.OrderStatus.PENDING;
                         boolean bIsPending = b.getOrderStatus() == Order.OrderStatus.PENDING;
                         if (aIsPending && !bIsPending) return -1;
                         if (!aIsPending && bIsPending) return 1;
-                        // Then by date desc
                         LocalDateTime dateA = a.getOrderDate() != null ? a.getOrderDate() : LocalDateTime.MIN;
                         LocalDateTime dateB = b.getOrderDate() != null ? b.getOrderDate() : LocalDateTime.MIN;
                         return dateB.compareTo(dateA);
                     })
                     .collect(Collectors.toList());
-            
+
             return new org.springframework.data.domain.PageImpl<>(content, orders.getPageable(), orders.getTotalElements());
         }
-        
+
         return orders.map(this::mapToOrderResponse);
     }
 
     private OrderResponse mapToOrderResponse(Order order) {
-        // Use OrderMapper to map Order entity to OrderResponse DTO
         OrderResponse response = orderMapper.toResponse(order);
-        
-        // Load and map order items using OrderItemMapper
+
         List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
         List<OrderItemResponse> itemResponses = orderItems.stream()
-                .map(orderItemMapper::toResponse)
+                .map(item -> {
+                    OrderItemResponse itemResponse = orderItemMapper.toResponse(item);
+                    List<OrderItemAddOn> addOns = orderItemAddOnRepository.findByOrderItemId(item.getId());
+                    itemResponse.setAddOns(addOns.stream()
+                            .map(ao -> AddOnResponse.builder()
+                                    .id(ao.getAddOn() != null ? ao.getAddOn().getId() : null)
+                                    .nameEn(ao.getAddOnNameEn())
+                                    .nameUr(ao.getAddOnNameUr())
+                                    .price(ao.getPrice())
+                                    .build())
+                            .collect(Collectors.toList()));
+                    return itemResponse;
+                })
                 .collect(Collectors.toList());
         response.setItems(itemResponses);
-        
+
         return response;
     }
 
-    // Helper class for item details
     private static class ItemDetails {
         private final String itemNameEn;
         private final String itemNameUr;

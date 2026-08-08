@@ -1,258 +1,196 @@
-<div class="order-taking-container">
-  <div class="order-layout">
-    <!-- Menu Section -->
-    <div class="menu-section">
-      <!-- Category Tabs -->
-      <div class="category-tabs">
-        <div *ngIf="loadingCategories" class="loading-indicator">Loading categories...</div>
-        <button 
-          *ngFor="let category of menuCategories" 
-          class="category-tab"
-          [class.active]="selectedCategory?.id === category.id"
-          (click)="selectCategory(category)">
-          {{ category.nameEn }}
-        </button>
-        <div *ngIf="!loadingCategories && menuCategories.length === 0" class="no-categories">
-          No categories available
+<div class="pos-shell">
+  <div class="pos-layout">
+    <section class="menu-pane">
+      <div class="menu-toolbar">
+        <div class="category-tabs">
+          @if (loadingCategories) {
+            <span class="muted">Loading...</span>
+          }
+          @for (category of menuCategories; track category.id) {
+            <button
+              type="button"
+              class="category-tab"
+              [class.active]="selectedCategory?.id === category.id"
+              (click)="selectCategory(category)">
+              {{ category.nameEn }}
+            </button>
+          }
         </div>
+        <input
+          class="search-input"
+          type="search"
+          placeholder="Search items..."
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="applySearch()">
       </div>
-      
-      <!-- Menu Items Grid -->
-      <div class="menu-items-grid">
-        <div *ngIf="loadingItems" class="loading-indicator">Loading items...</div>
-        <div 
-          *ngFor="let item of menuItems" 
-          class="menu-item-card"
-          (click)="addToCart(item)">
-          <div class="item-image">
-            <img [src]="getItemImage(item)" [alt]="item.nameEn" (error)="$event.target.src='https://via.placeholder.com/300x200?text=' + item.nameEn">
-          </div>
-          <div class="item-info">
-            <h3>{{ item.nameEn }}</h3>
-            <p class="item-description" *ngIf="item.descriptionEn">{{ item.descriptionEn }}</p>
-            <div class="item-footer">
-              <span class="item-price">{{ item.basePrice | currency:'PKR':'symbol':'1.0-0' }}</span>
-              <button class="btn-add" (click)="addToCart(item); $event.stopPropagation()">
-                <span>+</span>
-              </button>
+
+      <div class="items-grid">
+        @if (loadingItems) {
+          <div class="muted full">Loading items...</div>
+        }
+        @for (item of filteredItems; track item.id) {
+          <button type="button" class="item-card" (click)="openCompose(item)">
+            @if (getItemImage(item)) {
+              <img [src]="getItemImage(item)" [alt]="item.nameEn" class="item-thumb">
+            } @else {
+              <div class="item-thumb placeholder">{{ item.nameEn.charAt(0) }}</div>
+            }
+            <div class="item-meta">
+              <strong>{{ item.nameEn }}</strong>
+              <span class="price">{{ item.basePrice | currency:'PKR':'symbol':'1.0-0' }}</span>
             </div>
-            <div class="item-badges" *ngIf="item.sizes && item.sizes.length > 0">
-              <span class="badge">Multiple Sizes</span>
-            </div>
-            <div class="item-badges" *ngIf="item.availableAddOns && item.availableAddOns.length > 0">
-              <span class="badge">Add-ons Available</span>
-            </div>
-          </div>
-        </div>
-        <div *ngIf="!loadingItems && menuItems.length === 0 && selectedCategory" class="no-items">
-          <p>No items available in {{ selectedCategory.nameEn }} category</p>
-        </div>
+          </button>
+        }
+        @if (!loadingItems && filteredItems.length === 0) {
+          <div class="muted full">No items found</div>
+        }
       </div>
-    </div>
-    
-  <!-- Right Side Section -->
-  <div class="right-side-section">
-    <!-- Order List Compact -->
-    <div class="order-list-section">
-      <app-order-list-compact (orderClick)="onOrderClick($event)"></app-order-list-compact>
-    </div>
-      
-      <!-- Cart Section -->
-      <div class="cart-section">
+    </section>
+
+    <aside class="cart-pane">
+      <div class="recent-block">
+        <app-order-list-compact (orderClick)="onOrderClick($event)"></app-order-list-compact>
+      </div>
+
+      <div class="cart-block">
         <div class="cart-header">
-          <h2>Order Summary</h2>
-          <span class="cart-count">{{ cart.length }} items</span>
+          <h2>Current Order</h2>
+          <span class="badge">{{ cart.length }}</span>
         </div>
 
-      <!-- Order Type Selector -->
-      <div class="order-type-selector">
-        <label>Order Type:</label>
-        <select [(ngModel)]="orderType" class="form-control">
-          <option value="TAKEAWAY">Takeaway</option>
-          <option value="TABLE_PICKUP">Table Pickup</option>
-          <option value="HOME_DELIVERY">Home Delivery</option>
-        </select>
-      </div>
-      
-      <!-- Customer Info -->
-      <div class="customer-info">
-        <input 
-          type="text" 
-          placeholder="Customer Name (Optional)" 
-          [(ngModel)]="customerName"
-          class="form-control">
-        <input 
-          type="text" 
-          placeholder="Customer Phone (Optional)" 
-          [(ngModel)]="customerPhone"
-          class="form-control">
-        
-        <input 
-          *ngIf="orderType === 'HOME_DELIVERY'"
-          type="text" 
-          placeholder="Delivery Address *" 
-          [(ngModel)]="customerAddress"
-          class="form-control">
-        
-        <input 
-          *ngIf="orderType === 'TABLE_PICKUP'"
-          type="text" 
-          placeholder="Table Number *" 
-          [(ngModel)]="tableNumber"
-          class="form-control">
-      </div>
-      
-      <!-- Cart Items -->
-      <div class="cart-items">
-        <div *ngFor="let item of cart; let i = index" class="cart-item">
-          <div class="cart-item-info">
-            <span class="item-name">{{ item.itemName }}</span>
-            <span class="item-price">{{ item.price | currency:'PKR':'symbol':'1.0-0' }}</span>
-            <span *ngIf="item.selectedSizeCode" class="item-size">Size: {{ item.selectedSizeCode }}</span>
-          </div>
-          <div class="cart-item-actions">
-            <button class="btn-quantity" (click)="updateQuantity(i, -1)">-</button>
-            <span class="quantity">{{ item.quantity }}</span>
-            <button class="btn-quantity" (click)="updateQuantity(i, 1)">+</button>
-            <button class="btn-remove" (click)="removeFromCart(i)">×</button>
-          </div>
-          <div class="cart-item-total">
-            Total: {{ (item.price * item.quantity) | currency:'PKR':'symbol':'1.0-0' }}
-          </div>
+        <div class="order-type-row">
+          <button type="button" [class.active]="orderType === 'TAKEAWAY'" (click)="orderType = 'TAKEAWAY'">Takeaway</button>
+          <button type="button" [class.active]="orderType === 'TABLE_PICKUP'" (click)="orderType = 'TABLE_PICKUP'">Table</button>
+          <button type="button" [class.active]="orderType === 'HOME_DELIVERY'" (click)="orderType = 'HOME_DELIVERY'">Delivery</button>
         </div>
-        <div *ngIf="cart.length === 0" class="empty-cart">
-          <p>Cart is empty</p>
-          <p class="hint">Click on items to add them to cart</p>
-        </div>
-      </div>
-      
-      <!-- Voucher Section -->
-      <div class="voucher-section">
-        <input 
-          type="text" 
-          placeholder="Voucher Code (Optional)" 
-          [(ngModel)]="voucherCode"
-          class="form-control">
-      </div>
-      
-      <!-- Total Section -->
-      <div class="total-section">
-        <div class="total-row">
-          <span>Subtotal:</span>
-          <span>{{ getTotal() | currency:'PKR':'symbol':'1.0-0' }}</span>
-        </div>
-        <div class="total-row grand-total">
-          <span>Total:</span>
-          <span>{{ getTotal() | currency:'PKR':'symbol':'1.0-0' }}</span>
-        </div>
-        <button 
-          class="btn btn-primary btn-place-order" 
-          (click)="placeOrder()" 
-          [disabled]="cart.length === 0">
-          Place Order
-        </button>
-      </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Size Selection Modal -->
-  <div class="modal-overlay" *ngIf="selectedItemForSize" (click)="closeSizeModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>Select Size - {{ selectedItemForSize.nameEn }}</h3>
-        <button class="modal-close" (click)="closeSizeModal()">×</button>
-      </div>
-      <div class="modal-body">
-        <div class="size-options">
-          <button 
-            *ngFor="let size of getAvailableSizes(selectedItemForSize)" 
-            class="size-option"
-            (click)="addItemToCart(selectedItemForSize, size)">
-            <div class="size-name">{{ size.sizeNameEn }}</div>
-            <div class="size-code">{{ size.sizeCode }}</div>
-            <div class="size-price">
-              {{ (selectedItemForSize.basePrice + (size.priceModifier || 0)) | currency:'PKR':'symbol':'1.0-0' }}
-            </div>
-            <div *ngIf="size.priceModifier && size.priceModifier > 0" class="size-modifier">
-              +{{ size.priceModifier | currency:'PKR':'symbol':'1.0-0' }}
-            </div>
-          </button>
-          <button 
-            class="size-option no-size"
-            (click)="addItemToCart(selectedItemForSize, null)">
-            <div class="size-name">Regular</div>
-            <div class="size-price">{{ selectedItemForSize.basePrice | currency:'PKR':'symbol':'1.0-0' }}</div>
-          </button>
+        <div class="customer-fields">
+          <input type="text" placeholder="Customer name" [(ngModel)]="customerName">
+          <input type="text" placeholder="Phone" [(ngModel)]="customerPhone">
+          @if (orderType === 'HOME_DELIVERY') {
+            <input type="text" placeholder="Delivery address *" [(ngModel)]="customerAddress">
+          }
+          @if (orderType === 'TABLE_PICKUP') {
+            <input type="text" placeholder="Table number *" [(ngModel)]="tableNumber">
+          }
+          <input type="text" placeholder="Voucher code" [(ngModel)]="voucherCode">
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Order Status Update Modal -->
-  <div class="modal-overlay" *ngIf="showStatusModal && selectedOrderForStatus" (click)="closeStatusModal()">
-    <div class="modal-content status-modal" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>Update Order Status</h3>
-        <button class="modal-close" (click)="closeStatusModal()">×</button>
-      </div>
-      <div class="modal-body">
-        <div class="order-info-modal">
-          <div class="order-info-row">
-            <span class="info-label">Order Number:</span>
-            <span class="info-value">{{ selectedOrderForStatus.orderNumber }}</span>
-          </div>
-          <div class="order-info-row">
-            <span class="info-label">Customer:</span>
-            <span class="info-value">{{ selectedOrderForStatus.customerName || '-' }}</span>
-          </div>
-          <div class="order-info-row">
-            <span class="info-label">Current Status:</span>
-            <span class="status-badge-current" [style.background-color]="getStatusColor(selectedOrderForStatus.orderStatus)">
-              {{ getStatusLabel(selectedOrderForStatus.orderStatus) }}
-            </span>
-          </div>
-          <div class="order-info-row">
-            <span class="info-label">Amount:</span>
-            <span class="info-value">{{ selectedOrderForStatus.totalAmount | currency:'PKR':'symbol':'1.0-0' }}</span>
-          </div>
-        </div>
-        
-        <div class="status-buttons-section">
-          <h4>Select New Status:</h4>
-          <div class="status-buttons-grid">
-            @for (status of orderStatuses; track status) {
-              <button 
-                class="status-button"
-                [style.background-color]="getStatusColor(status)"
-                [class.active]="selectedOrderForStatus.orderStatus === status"
-                [disabled]="updatingStatus || selectedOrderForStatus.orderStatus === status"
-                (click)="updateOrderStatus(status)">
-                <span class="status-icon">
-                  @if (status === 'PENDING') { ⏳ }
-                  @else if (status === 'PREPARING') { 🔄 }
-                  @else if (status === 'READY') { ✅ }
-                  @else if (status === 'COMPLETED') { ✔️ }
-                  @else if (status === 'CANCELLED') { ❌ }
-                </span>
-                <span class="status-text">{{ getStatusLabel(status) }}</span>
-                @if (selectedOrderForStatus.orderStatus === status) {
-                  <span class="current-indicator">Current</span>
+        <div class="cart-items">
+          @for (item of cart; track $index; let i = $index) {
+            <div class="cart-line">
+              <div class="cart-line-main">
+                <strong>{{ item.itemName }}</strong>
+                @if (item.addOnNames.length) {
+                  <small>{{ item.addOnNames.join(', ') }}</small>
                 }
+                <span>{{ item.price | currency:'PKR':'symbol':'1.0-0' }}</span>
+              </div>
+              <div class="qty-controls">
+                <button type="button" (click)="updateQuantity(i, -1)">−</button>
+                <span>{{ item.quantity }}</span>
+                <button type="button" (click)="updateQuantity(i, 1)">+</button>
+                <button type="button" class="remove" (click)="removeFromCart(i)">×</button>
+              </div>
+            </div>
+          } @empty {
+            <p class="muted">Tap an item to start an order</p>
+          }
+        </div>
+
+        <div class="checkout">
+          <div class="total-row">
+            <span>Total</span>
+            <strong>{{ getTotal() | currency:'PKR':'symbol':'1.0-0' }}</strong>
+          </div>
+          <button
+            type="button"
+            class="place-btn"
+            (click)="placeOrder()"
+            [disabled]="cart.length === 0 || placingOrder">
+            {{ placingOrder ? 'Placing...' : 'Place Order' }}
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+@if (composeItem) {
+  <div class="modal-backdrop" (click)="closeCompose()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>{{ composeItem.nameEn }}</h3>
+        <button type="button" (click)="closeCompose()">×</button>
+      </div>
+      <div class="modal-body">
+        @if (getAvailableSizes(composeItem).length) {
+          <h4>Size</h4>
+          <div class="option-grid">
+            @for (size of getAvailableSizes(composeItem); track size.sizeCode) {
+              <button
+                type="button"
+                class="option-btn"
+                [class.active]="selectedSize?.sizeCode === size.sizeCode"
+                (click)="selectedSize = size">
+                <span>{{ size.sizeNameEn }}</span>
+                <strong>{{ (composeItem.basePrice + (size.priceModifier || 0)) | currency:'PKR':'symbol':'1.0-0' }}</strong>
               </button>
             }
           </div>
-        </div>
-        
-        @if (updatingStatus) {
-          <div class="updating-indicator">
-            <span>Updating status...</span>
+        }
+
+        @if (getAvailableAddOns(composeItem).length) {
+          <h4>Add-ons</h4>
+          <div class="option-grid">
+            @for (addOn of getAvailableAddOns(composeItem); track addOn.id) {
+              <button
+                type="button"
+                class="option-btn"
+                [class.active]="isAddOnSelected(addOn)"
+                (click)="toggleAddOn(addOn)">
+                <span>{{ addOn.nameEn }}</span>
+                <strong>+{{ (addOn.price || 0) | currency:'PKR':'symbol':'1.0-0' }}</strong>
+              </button>
+            }
           </div>
         }
+
+        <div class="compose-total">
+          <span>Unit price</span>
+          <strong>{{ getComposeUnitPrice() | currency:'PKR':'symbol':'1.0-0' }}</strong>
+        </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closeStatusModal()" [disabled]="updatingStatus">Cancel</button>
+      <div class="modal-actions">
+        <button type="button" class="ghost" (click)="closeCompose()">Cancel</button>
+        <button type="button" class="place-btn" (click)="confirmCompose()">Add to cart</button>
       </div>
     </div>
   </div>
-</div>
+}
+
+@if (showStatusModal && selectedOrderForStatus) {
+  <div class="modal-backdrop" (click)="closeStatusModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-head">
+        <h3>Update status</h3>
+        <button type="button" (click)="closeStatusModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>{{ selectedOrderForStatus.orderNumber }}</strong> — {{ selectedOrderForStatus.customerName || 'Customer' }}</p>
+        <div class="status-grid">
+          @for (status of orderStatuses; track status) {
+            <button
+              type="button"
+              class="status-btn"
+              [style.background]="getStatusColor(status)"
+              [disabled]="selectedOrderForStatus.orderStatus === status"
+              (click)="updateOrderStatus(status)">
+              {{ getStatusLabel(status) }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}

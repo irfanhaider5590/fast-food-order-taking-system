@@ -130,3 +130,29 @@
   border-color: white;
 }
 
+/* Compact POS chrome on order-taking */
+.pos-mode .app-header,
+.app-header-compact {
+  padding: 8px 0;
+}
+
+.pos-mode .header-content h1,
+.app-header-compact .header-content h1 {
+  font-size: 18px;
+}
+
+.pos-mode .brand-logo,
+.app-header-compact .brand-logo {
+  height: 32px;
+}
+
+.app-main-pos {
+  padding: 0;
+}
+
+.container-fluid-pos {
+  max-width: none;
+  width: 100%;
+  padding: 0;
+}
+

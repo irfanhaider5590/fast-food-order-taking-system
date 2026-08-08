@@ -19,6 +19,10 @@ public class Settings {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_id")
+    private Shop shop;
     
     @Column(name = "brand_name", nullable = false)
     private String brandName;

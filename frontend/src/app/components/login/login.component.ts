@@ -4,6 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -29,7 +30,7 @@ export class LoginComponent {
 
   onSubmit() {
     if (this.loginForm.valid) {
-      this.http.post<any>('http://localhost:8080/fast-food-order-api/api/auth/login', {
+      this.http.post<any>(`${environment.apiUrl}/auth/login`, {
         username: this.loginForm.value.username,
         password: this.loginForm.value.password
       }).subscribe({

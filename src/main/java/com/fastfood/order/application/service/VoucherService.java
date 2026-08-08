@@ -3,9 +3,12 @@ package com.fastfood.order.application.service;
 import com.fastfood.order.application.dto.VoucherRequest;
 import com.fastfood.order.application.dto.VoucherResponse;
 import com.fastfood.order.domain.entity.Voucher;
+import com.fastfood.order.infrastructure.config.CacheConfig;
 import com.fastfood.order.infrastructure.repository.VoucherRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +22,14 @@ import java.util.stream.Collectors;
 public class VoucherService {
 
     private final VoucherRepository voucherRepository;
+    private final ShopContextService shopContextService;
 
+    @CacheEvict(value = CacheConfig.ACTIVE_VOUCHERS, allEntries = true)
     public VoucherResponse createVoucher(VoucherRequest request) {
         log.info("Creating voucher: {}", request.getCode());
 
         Voucher voucher = Voucher.builder()
+                .shop(shopContextService.requireCurrentShop())
                 .code(request.getCode().toUpperCase())
                 .descriptionEn(request.getDescriptionEn())
                 .descriptionUr(request.getDescriptionUr())
@@ -42,6 +48,7 @@ public class VoucherService {
         return mapToResponse(voucher);
     }
 
+    @CacheEvict(value = CacheConfig.ACTIVE_VOUCHERS, allEntries = true)
     public VoucherResponse updateVoucher(Long id, VoucherRequest request) {
         log.info("Updating voucher with ID: {}", id);
 
@@ -88,18 +95,22 @@ public class VoucherService {
 
     @Transactional(readOnly = true)
     public List<VoucherResponse> getAllVouchers() {
-        return voucherRepository.findAll().stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return voucherRepository.findByShopIdOrderByValidUntilDesc(shopId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.ACTIVE_VOUCHERS, key = "'active-' + @shopContextService.requireCurrentShopId()")
     public List<VoucherResponse> getActiveVouchers() {
-        return voucherRepository.findByIsActiveTrue().stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return voucherRepository.findByShopIdAndIsActiveTrue(shopId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    @CacheEvict(value = CacheConfig.ACTIVE_VOUCHERS, allEntries = true)
     public void deleteVoucher(Long id) {
         log.info("Deleting voucher with ID: {}", id);
         if (!voucherRepository.existsById(id)) {

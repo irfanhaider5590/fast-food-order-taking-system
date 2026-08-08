@@ -10,5 +10,9 @@ import java.util.List;
 public interface MenuCategoryRepository extends JpaRepository<MenuCategory, Long> {
 
     List<MenuCategory> findByIsActiveTrueOrderByDisplayOrderAsc();
+
+    List<MenuCategory> findByShopIdOrderByDisplayOrderAsc(Long shopId);
+
+    List<MenuCategory> findByShopIdAndIsActiveTrueOrderByDisplayOrderAsc(Long shopId);
 }
 

@@ -3,9 +3,12 @@ package com.fastfood.order.application.service;
 import com.fastfood.order.application.dto.AddOnRequest;
 import com.fastfood.order.application.dto.AddOnResponse;
 import com.fastfood.order.domain.entity.AddOn;
+import com.fastfood.order.infrastructure.config.CacheConfig;
 import com.fastfood.order.infrastructure.repository.AddOnRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +22,14 @@ import java.util.stream.Collectors;
 public class AddOnService {
 
     private final AddOnRepository addOnRepository;
+    private final ShopContextService shopContextService;
 
+    @CacheEvict(value = CacheConfig.ADD_ONS, allEntries = true)
     public AddOnResponse createAddOn(AddOnRequest request) {
         log.info("Creating add-on: {}", request.getNameEn());
 
         AddOn addOn = AddOn.builder()
+                .shop(shopContextService.requireCurrentShop())
                 .nameEn(request.getNameEn())
                 .nameUr(request.getNameUr())
                 .descriptionEn(request.getDescriptionEn())
@@ -37,6 +43,7 @@ public class AddOnService {
         return mapToResponse(addOn);
     }
 
+    @CacheEvict(value = CacheConfig.ADD_ONS, allEntries = true)
     public AddOnResponse updateAddOn(Long id, AddOnRequest request) {
         log.info("Updating add-on with ID: {}", id);
 
@@ -82,19 +89,25 @@ public class AddOnService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.ADD_ONS, key = "'all-' + @shopContextService.requireCurrentShopId()")
     public List<AddOnResponse> getAllAddOns() {
-        return addOnRepository.findAll().stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return addOnRepository.findByShopIdOrderByDisplayOrderAsc(shopId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.ADD_ONS, key = "'available-' + @shopContextService.requireCurrentShopId()")
     public List<AddOnResponse> getAvailableAddOns() {
-        return addOnRepository.findByIsAvailableTrueOrderByDisplayOrderAsc().stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return addOnRepository.findByShopIdOrderByDisplayOrderAsc(shopId).stream()
+                .filter(a -> Boolean.TRUE.equals(a.getIsAvailable()))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    @CacheEvict(value = CacheConfig.ADD_ONS, allEntries = true)
     public void deleteAddOn(Long id) {
         log.info("Deleting add-on with ID: {}", id);
         if (!addOnRepository.existsById(id)) {

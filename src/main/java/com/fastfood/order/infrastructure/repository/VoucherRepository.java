@@ -15,6 +15,13 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
     Optional<Voucher> findByCodeAndIsActiveTrueAndValidFromBeforeAndValidUntilAfter(
             String code, LocalDateTime now1, LocalDateTime now2);
 
+    Optional<Voucher> findByShopIdAndCodeAndIsActiveTrueAndValidFromBeforeAndValidUntilAfter(
+            Long shopId, String code, LocalDateTime now1, LocalDateTime now2);
+
     java.util.List<Voucher> findByIsActiveTrue();
+
+    java.util.List<Voucher> findByShopIdOrderByValidUntilDesc(Long shopId);
+
+    java.util.List<Voucher> findByShopIdAndIsActiveTrue(Long shopId);
 }
 

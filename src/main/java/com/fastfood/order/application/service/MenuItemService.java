@@ -2,9 +2,12 @@ package com.fastfood.order.application.service;
 
 import com.fastfood.order.application.dto.*;
 import com.fastfood.order.domain.entity.*;
+import com.fastfood.order.infrastructure.config.CacheConfig;
 import com.fastfood.order.infrastructure.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +26,9 @@ public class MenuItemService {
     private final MenuItemSizeRepository sizeRepository;
     private final MenuItemAddOnRepository menuItemAddOnRepository;
     private final AddOnRepository addOnRepository;
+    private final ShopContextService shopContextService;
 
+    @CacheEvict(value = CacheConfig.MENU_ITEMS, allEntries = true)
     public MenuItemResponse createMenuItem(MenuItemRequest request) {
         log.info("Creating menu item: {}", request.getNameEn());
         
@@ -37,6 +42,7 @@ public class MenuItemService {
         return getMenuItemById(savedMenuItem.getId());
     }
 
+    @CacheEvict(value = CacheConfig.MENU_ITEMS, allEntries = true)
     public MenuItemResponse updateMenuItem(Long id, MenuItemRequest request) {
         log.info("Updating menu item with ID: {}", id);
         log.info("Received request - sizes: {}, addOnIds: {}", 
@@ -75,8 +81,10 @@ public class MenuItemService {
         return getAllMenuItems();
     }
 
+    @Cacheable(value = CacheConfig.MENU_ITEMS, key = "'all-' + @shopContextService.requireCurrentShopId()")
     public List<MenuItemResponse> getAllMenuItems() {
-        return menuItemRepository.findAll().stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return menuItemRepository.findByShopIdOrderByDisplayOrderAsc(shopId).stream()
                 .map(item -> {
                     List<MenuItemSize> sizes = sizeRepository.findByMenuItemIdOrderByDisplayOrderAsc(item.getId());
                     List<AddOn> availableAddOns = getAvailableAddOnsForMenuItem(item.getId());
@@ -86,12 +94,15 @@ public class MenuItemService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.MENU_ITEMS, key = "'cat-' + #categoryId + '-' + @shopContextService.requireCurrentShopId()")
     public List<MenuItemResponse> getMenuItemsByCategory(Long categoryId) {
-        return menuItemRepository.findByCategoryIdOrderByDisplayOrder(categoryId).stream()
+        Long shopId = shopContextService.requireCurrentShopId();
+        return menuItemRepository.findByShopIdAndCategoryIdOrderByDisplayOrderAsc(shopId, categoryId).stream()
                 .map(item -> getMenuItemById(item.getId()))
                 .collect(Collectors.toList());
     }
 
+    @CacheEvict(value = CacheConfig.MENU_ITEMS, allEntries = true)
     public void deleteMenuItem(Long id) {
         log.info("Deleting menu item with ID: {}", id);
         validateMenuItemExists(id);
@@ -120,6 +131,7 @@ public class MenuItemService {
 
     private MenuItem buildMenuItem(MenuItemRequest request, MenuCategory category) {
         return MenuItem.builder()
+                .shop(shopContextService.requireCurrentShop())
                 .category(category)
                 .nameEn(request.getNameEn())
                 .nameUr(request.getNameUr())

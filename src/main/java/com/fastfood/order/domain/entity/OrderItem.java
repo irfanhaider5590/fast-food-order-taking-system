@@ -64,6 +64,10 @@ public class OrderItem {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<OrderItemAddOn> addOns = new java.util.ArrayList<>();
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

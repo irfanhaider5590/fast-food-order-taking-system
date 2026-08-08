@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Chart, registerables } from 'chart.js';
 import { CommonModule } from '@angular/common';
 import { LoggerService } from '../../services/logger.service';
+import { environment } from '../../../environments/environment';
 
 Chart.register(...registerables);
 
@@ -36,10 +37,7 @@ export class AnalyticsComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadAnalytics() {
-    const token = localStorage.getItem('accessToken');
-    this.http.get<any>('http://localhost:8080/fast-food-order-api/api/admin/analytics/sales', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    }).subscribe({
+    this.http.get<any>(`${environment.apiUrl}/admin/analytics/sales`).subscribe({
       next: (data) => {
         this.salesData = data;
         this.updateCharts(data);
