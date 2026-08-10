@@ -9,6 +9,8 @@ import { HttpClient } from '@angular/common/http';
 
 import { AppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
+import { environment } from './environments/environment';
+import { resolveApiUrl, RuntimeApiConfig } from './app/core/api-url';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, './assets/i18n/', '.json');
@@ -25,22 +27,40 @@ const authInterceptorFn: HttpInterceptorFn = (req, next) => {
   return next(req);
 };
 
-bootstrapApplication(AppComponent, {
-  providers: [
-    provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptorFn])),
-    provideAnimations(),
-    importProvidersFrom(
-      TranslateModule.forRoot({
-        loader: {
-          provide: TranslateLoader,
-          useFactory: HttpLoaderFactory,
-          deps: [HttpClient]
-        },
-        defaultLanguage: 'en'
-      })
-    )
-  ]
+async function loadRuntimeConfig(): Promise<RuntimeApiConfig> {
+  try {
+    const res = await fetch('assets/config.json', { cache: 'no-store' });
+    if (!res.ok) {
+      return {};
+    }
+    return (await res.json()) as RuntimeApiConfig;
+  } catch {
+    return {};
+  }
+}
+
+loadRuntimeConfig().then((cfg) => {
+  environment.apiUrl = resolveApiUrl(cfg);
+  // Helpful for debugging port/host mismatches
+  console.info('[api] Using API base URL:', environment.apiUrl);
+
+  return bootstrapApplication(AppComponent, {
+    providers: [
+      provideRouter(routes),
+      provideHttpClient(withInterceptors([authInterceptorFn])),
+      provideAnimations(),
+      importProvidersFrom(
+        TranslateModule.forRoot({
+          loader: {
+            provide: TranslateLoader,
+            useFactory: HttpLoaderFactory,
+            deps: [HttpClient]
+          },
+          defaultLanguage: 'en'
+        })
+      )
+    ]
+  });
 }).catch(err => {
   console.error('Failed to bootstrap application:', err);
 });

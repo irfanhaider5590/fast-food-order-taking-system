@@ -12,5 +12,7 @@ public interface StockItemRepository extends JpaRepository<StockItem, Long> {
     List<StockItem> findByIsActiveTrueOrderByNameEnAsc();
     List<StockItem> findByCurrentQuantityLessThanEqualOrderByCurrentQuantityAsc(BigDecimal threshold);
     List<StockItem> findByShopIdOrderByNameEnAsc(Long shopId);
+
+    java.util.Optional<StockItem> findByShopIdAndBarcodeIgnoreCase(Long shopId, String barcode);
 }
 

@@ -2,7 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { StockItem, MenuItemIngredient, StockWarning } from '../models/stock.models';
+import {
+  StockItem,
+  StockWarning,
+  StockConsumptionConfig,
+  StockConsumptionRow,
+  ConsumptionCatalog
+} from '../models/stock.models';
 
 @Injectable({
   providedIn: 'root'
@@ -29,6 +35,14 @@ export class StockService {
   getStockItemById(id: number): Observable<StockItem> {
     const token = localStorage.getItem('accessToken');
     return this.http.get<StockItem>(`${this.apiUrl}/items/${id}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+  }
+
+  lookupByBarcode(barcode: string): Observable<StockItem> {
+    const token = localStorage.getItem('accessToken');
+    return this.http.get<StockItem>(`${this.apiUrl}/items/lookup`, {
+      params: { barcode },
       headers: { 'Authorization': `Bearer ${token}` }
     });
   }
@@ -60,23 +74,6 @@ export class StockService {
     });
   }
 
-  getMenuItemIngredients(menuItemId: number): Observable<MenuItemIngredient[]> {
-    const token = localStorage.getItem('accessToken');
-    return this.http.get<MenuItemIngredient[]>(`${this.apiUrl}/menu-items/${menuItemId}/ingredients`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-  }
-
-  saveMenuItemIngredients(menuItemId: number, ingredients: MenuItemIngredient[]): Observable<void> {
-    const token = localStorage.getItem('accessToken');
-    return this.http.post<void>(`${this.apiUrl}/menu-items/${menuItemId}/ingredients`, ingredients, {
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-  }
-
   adjustStock(id: number, quantity: number, notes?: string): Observable<void> {
     const token = localStorage.getItem('accessToken');
     const params: any = { quantity };
@@ -84,6 +81,17 @@ export class StockService {
     return this.http.post<void>(`${this.apiUrl}/items/${id}/adjust`, null, {
       params,
       headers: { 'Authorization': `Bearer ${token}` }
+    });
+  }
+
+  /** Set absolute on-hand quantity (select stock + enter qty screen). */
+  setStockQuantity(id: number, quantity: number, notes?: string): Observable<StockItem> {
+    const token = localStorage.getItem('accessToken');
+    return this.http.put<StockItem>(`${this.apiUrl}/items/${id}/quantity`, { quantity, notes }, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     });
   }
 
@@ -141,6 +149,35 @@ export class StockService {
     const token = localStorage.getItem('accessToken');
     return this.http.post<void>(`${this.apiUrl}/warnings/config/alerts-enabled`, null, {
       params: { enabled: enabled.toString() },
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+  }
+
+  getStockConsumptions(stockItemId: number): Observable<StockConsumptionConfig> {
+    const token = localStorage.getItem('accessToken');
+    return this.http.get<StockConsumptionConfig>(`${this.apiUrl}/items/${stockItemId}/consumptions`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+  }
+
+  saveStockConsumptions(stockItemId: number, rows: StockConsumptionRow[]): Observable<StockConsumptionConfig> {
+    const token = localStorage.getItem('accessToken');
+    const body = rows.map(r => ({
+      menuItemId: r.menuItemId,
+      sizeCode: r.sizeCode || null,
+      servingsPerUnit: r.servingsPerUnit
+    }));
+    return this.http.put<StockConsumptionConfig>(`${this.apiUrl}/items/${stockItemId}/consumptions`, body, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+
+  getConsumptionCatalog(): Observable<ConsumptionCatalog> {
+    const token = localStorage.getItem('accessToken');
+    return this.http.get<ConsumptionCatalog>(`${this.apiUrl}/consumption-catalog`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
   }

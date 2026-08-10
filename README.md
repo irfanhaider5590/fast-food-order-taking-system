@@ -1,66 +1,149 @@
 # Fast Food Order Taking System
 
-A modern, fast, minimal desktop application for fast food order taking with centralized online database and analytics.
+A modern, fast, minimal **shop order / staff POS** platform (Spring Boot API + Angular desktop SPA) with centralized PostgreSQL, JWT auth, stock, analytics, and license gating.
 
-## Architecture
+> Multi-shop ready via `shop_id`. Customer website / mobile apps are **out of scope** for this repo.
 
-- **Frontend**: Angular 17 with Electron/PWA support
-- **Backend**: Java 21 (Spring Boot 3.2) with Clean Architecture
-- **Database**: PostgreSQL (online centralized)
-- **Security**: JWT authentication
-- **Architecture**: Clean Architecture + SOLID + OOP principles
+## Architecture overview
+
+| Layer | Tech |
+|--------|------|
+| **Frontend** | Angular SPA (`frontend/`) — staff POS + admin |
+| **Backend** | Java 21 / Spring Boot 3 — `domain` · `application` · `infrastructure` · `presentation` |
+| **Database** | PostgreSQL + **Flyway** (`src/main/resources/db/migration/`) |
+| **Security** | JWT + roles (`ADMIN`, `BRANCH_MANAGER`) + license interceptor |
+
+### Module & functionality map
+
+```mermaid
+flowchart TB
+  subgraph Actors["Who uses it"]
+    A[ADMIN]
+    BM[BRANCH_MANAGER]
+  end
+
+  subgraph FE["Angular SPA — frontend/"]
+    Login["/login"]
+    LicenseUI["/license — activate key"]
+    Dash["/dashboard"]
+    OT["/orders — Order Taking POS"]
+    OM["/order-management — search / status"]
+    StockUI["/stock — add·remove qty, barcode, edit names"]
+    Notif["/notifications — low-stock alerts"]
+    MenuUI["/menu — categories · items · sizes · add-ons · combos"]
+    UsersUI["/user-management"]
+    AnalyticsUI["/analytics — sales charts"]
+    SettingsUI["/settings — brand · license"]
+  end
+
+  subgraph API["Spring Boot — /api"]
+    Auth["/api/auth — login · password reset"]
+    Orders["/api/orders — create · list · status · search"]
+    Menu["/api/menu/* — categories · items · add-ons · combos"]
+    Stock["/api/stock/* — items · adjust · consumptions · warnings"]
+    AdminUsers["/api/admin/users"]
+    AdminAnalytics["/api/admin/analytics"]
+    Vouchers["/api/vouchers"]
+    Settings["/api/settings"]
+    LicenseAPI["/api/license — status · activate · machine-id"]
+    Files["/api/files — upload · serve"]
+    Receipt["/api/receipt — auto-print flag"]
+  end
+
+  subgraph Cross["Cross-cutting"]
+    JWT[JWT filter]
+    LicGate["LicenseValidationInterceptor<br/>blocks business APIs if license invalid"]
+    ShopCtx["ShopContext — shop_id scoping"]
+  end
+
+  subgraph DB["PostgreSQL"]
+    T[(shops · branches · users · roles<br/>menu_* · combos · vouchers<br/>orders* · stock_* · licenses · settings)]
+  end
+
+  A --> Dash
+  BM --> Dash
+  Dash --> OT & OM
+  A --> StockUI & Notif & MenuUI & UsersUI & AnalyticsUI & SettingsUI
+
+  FE --> JWT --> API
+  LicGate --> API
+  API --> ShopCtx --> DB
+
+  OT & OM --> Orders
+  StockUI & Notif --> Stock
+  MenuUI --> Menu
+  UsersUI --> AdminUsers
+  AnalyticsUI --> AdminAnalytics
+  SettingsUI --> Settings & LicenseAPI
+  Login --> Auth
+```
+
+### Access matrix (UI + API)
+
+| Area | ADMIN | BRANCH_MANAGER | Needs valid license? |
+|------|:-----:|:--------------:|:--------------------:|
+| Order Taking / Order Management | ✅ | ✅ | ✅ Yes |
+| Stock Management + stock notifications | ✅ | ❌ | ✅ Yes |
+| Menu / Users / Analytics / Vouchers | ✅ | ❌ | ✅ Yes |
+| Settings (brand + renew license) | ✅ | ❌ | ❌ Always (so admin can renew) |
+| Login / License status APIs | ✅ | ✅ | ❌ |
+
+**Backend enforcement:** role via `@PreAuthorize` / `SecurityConfig`; license via `LicenseValidationInterceptor` (403 `LICENSE_INVALID` when expired). Exempt: `/api/license/**`, `/api/auth/**`, `/api/settings/**`, `/api/files/**`, health, receipt.
+
+### Backend package layout
+
+```
+com.fastfood.order/
+├── domain/entity          # Order, Menu*, Stock*, User, License, Shop, …
+├── application/service    # Business logic (OrderService, StockManagementService, …)
+├── application/dto        # Request/response DTOs
+├── infrastructure/        # JPA repos, JWT, license interceptor, API JSON logging, storage
+└── presentation/controller# REST endpoints under /api/*
+```
+
+### Frontend feature screens
+
+```
+frontend/src/app/
+├── components/            # login, dashboard, order-taking, stock-management, …
+├── services/              # HTTP clients (order, stock, license, …)
+├── guards/                # AuthGuard, AdminGuard
+└── app.routes.ts          # Route → screen mapping
+```
 
 ## Features
 
-### Core Functionality
-- Fast & reliable order taking
-- Support for Table Pickup, Takeaway, and Home Delivery
-- Menu management with categories, sizes, and add-ons
-- Combo meals support
-- Voucher-based discounts
-- Cash on spot and cash on delivery payments
+### Core POS
+- Fast order taking (table pickup, takeaway, home delivery)
+- Menu with categories, sizes, add-ons, combos, vouchers
+- Cash on spot / cash on delivery
+- Auto stock deduction from **Consumption Config** (yield per menu item)
+- Receipt auto-print support
 
-### Admin Dashboard
-- Sales analytics (current month, last 3 months, last 12 months)
-- Graphical charts (line, bar, pie charts)
-- Category-wise sales analysis
-- Popular items tracking
-- Combo performance metrics
-- Filter by date range, category, item, and branch
+### Stock (Admin)
+- Stock names, unit, threshold, barcode, qty-per-scan
+- Add stock (additive) / remove expired·damaged
+- Barcode scanner restock
+- Low-stock warnings + notification bell
 
-### Security
-- JWT authentication with refresh tokens
-- Role-based access control (Admin, Branch Manager)
-- Secure API endpoints
-
-### Multi-language Support
-- English
-- Urdu (RTL support)
+### Admin
+- Sales analytics (charts, filters)
+- User management (ADMIN / BRANCH_MANAGER)
+- Brand settings + license activation
+- EN / UR (RTL) i18n
 
 ## Project Structure
 
 ```
 fast-food-order-api/
-├── src/
-│   ├── main/
-│   │   ├── java/com/fastfood/order/
-│   │   │   ├── domain/          # Domain entities
-│   │   │   ├── application/     # Application services & DTOs
-│   │   │   ├── infrastructure/  # Repositories, security, external services
-│   │   │   └── presentation/     # REST controllers
-│   │   └── resources/
-│   │       └── application.yml  # Configuration
-│   └── test/
-├── database/
-│   └── schema.sql               # Database schema SQL script
-├── frontend/                     # Angular application
-│   └── src/
-│       ├── app/
-│       │   ├── components/
-│       │   └── services/
-│       └── assets/
-│           └── i18n/             # Translation files
-└── pom.xml
+├── src/main/java/com/fastfood/order/   # Backend (see package layout above)
+├── src/main/resources/
+│   ├── application*.yml
+│   └── db/migration/                   # Flyway V1+
+├── database/                           # Manual/bootstrap SQL helpers
+├── frontend/                           # Angular SPA
+├── pom.xml
+└── README.md
 ```
 
 ## Setup Instructions
@@ -163,20 +246,16 @@ fast-food-order-api/
 
 ## Database Schema
 
-The database schema is defined in `database/schema.sql`. Run this script manually to set up the database.
+Schema evolves with **Flyway** under `src/main/resources/db/migration/`.  
+`database/schema.sql` and related scripts are helpers / bootstrap references.
 
-Key entities:
-- **branches** - Branch/location information
-- **users** - System users with roles
-- **roles** - User roles (ADMIN, BRANCH_MANAGER)
-- **menu_categories** - Menu categories
-- **menu_items** - Individual menu items
-- **orders** - Customer orders
-- **order_items** - Items in each order
-- **vouchers** - Discount vouchers
-- **franchise_inquiries** - Franchise inquiry submissions
-
-**Note**: This project does not use Liquibase. Database migrations should be managed manually using SQL scripts.
+Key areas:
+- **shops / branches / users / roles** — tenancy and access (`ADMIN`, `BRANCH_MANAGER`)
+- **menu_*** / **combos** / **vouchers** — catalog
+- **orders*** — POS orders
+- **stock_items** / **stock_transactions** / **stock_item_consumptions** / **stock_warnings** — inventory
+- **licenses** / **settings** — activation and brand
+- **franchise_inquiries** — franchise form submissions
 
 ## Security
 

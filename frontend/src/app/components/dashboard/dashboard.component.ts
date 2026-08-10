@@ -14,9 +14,11 @@ import { Subscription } from 'rxjs';
 export class DashboardComponent implements OnInit, OnDestroy {
   
   user: any;
-  isLicenseValid = false; // Start with false, will be updated from service
-  isAdmin = false; // Track if current user is admin
+  /** null = not loaded yet (avoids false→true reload loop) */
+  isLicenseValid: boolean | null = null;
+  isAdmin = false;
   private licenseStatusSubscription?: Subscription;
+  private hasLoadedLicenseOnce = false;
 
   constructor(
     private router: Router,
@@ -34,53 +36,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Defer initial check to avoid change detection issues
     setTimeout(() => {
-      // Get current status first (if available)
       const currentStatus = this.licenseGuard.getCurrentStatus();
       if (currentStatus) {
         this.isLicenseValid = currentStatus.isValid === true;
+        this.hasLoadedLicenseOnce = true;
         this.cdr.detectChanges();
       } else {
-        // Only check if status is not available (initial load)
         this.licenseGuard.checkLicenseStatus();
       }
     }, 0);
 
-    // Subscribe to license status changes (distinctUntilChanged is already in service)
     this.licenseStatusSubscription = this.licenseGuard.licenseStatus$.subscribe(status => {
       if (!status) {
-        return; // Wait for initial status
+        return;
       }
-      
-      // Use setTimeout to defer change detection
+
       setTimeout(() => {
-        const wasValid = this.isLicenseValid;
-        
-        // Debug: Log the full status object
-        console.log('License status received in dashboard:', status);
-        console.log('status?.isValid:', status?.isValid);
-        console.log('status?.isValid === true:', status?.isValid === true);
-        console.log('typeof status?.isValid:', typeof status?.isValid);
-        
-        this.isLicenseValid = status?.isValid === true;
+        const previous = this.isLicenseValid;
+        this.isLicenseValid = status.isValid === true;
         this.cdr.detectChanges();
-        
-        console.log('License status changed:', { 
-          wasValid, 
-          isNowValid: this.isLicenseValid, 
-          isAdmin: this.isAdmin,
-          status,
-          user: this.user
-        });
-        
-        // If license just became valid, refresh the page to show all modules
-        if (!wasValid && this.isLicenseValid) {
-          console.log('License became valid, reloading page...');
-          setTimeout(() => {
-            window.location.reload();
-          }, 500);
+
+        // Only reload when license recovers after we already knew it was invalid
+        // (e.g. after activation) — never on first load (previous === null).
+        if (this.hasLoadedLicenseOnce && previous === false && this.isLicenseValid === true) {
+          setTimeout(() => window.location.reload(), 300);
         }
+        this.hasLoadedLicenseOnce = true;
       }, 0);
     });
   }

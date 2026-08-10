@@ -49,9 +49,11 @@ tmp/
 .DS_Store
 Thumbs.db
 
-# Environment
+# Environment / local secrets (never commit)
 .env
 .env.local
+**/application-local.yml
+**/application-local.yaml
 
 # SSL Certificates
 *.p12

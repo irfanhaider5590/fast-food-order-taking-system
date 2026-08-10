@@ -1,0 +1,5 @@
+{
+  "apiBaseUrl": "",
+  "apiPort": "8081",
+  "apiContextPath": "/fast-food-order-api"
+}

@@ -1,184 +1,436 @@
 <div class="stock-management-container">
-  <!-- Tabs -->
   <div class="tabs">
-    <button 
-      class="tab-button" 
-      [class.active]="activeTab === 'items'"
-      (click)="setTab('items')">
-      Stock Items
+    <button
+      class="tab-button"
+      [class.active]="activeTab === 'stock'"
+      (click)="setTab('stock')">
+      Stock
     </button>
-    <button 
-      class="tab-button" 
-      [class.active]="activeTab === 'ingredients'"
-      (click)="setTab('ingredients')">
-      Menu Item Ingredients
+    <button
+      *ngIf="isAdmin"
+      class="tab-button"
+      [class.active]="activeTab === 'consumptions'"
+      (click)="setTab('consumptions')">
+      Consumption Config
     </button>
   </div>
 
-  <!-- Warning Interval Configuration -->
-  <div class="config-section" *ngIf="activeTab === 'items'">
-    <div class="config-card">
-      <div class="config-header">
-        <h3>Stock Warning Settings</h3>
-        <button class="btn btn-sm btn-primary" (click)="showIntervalConfig = !showIntervalConfig">
-          {{ showIntervalConfig ? 'Cancel' : 'Configure Warning Interval' }}
-        </button>
-      </div>
-      <div *ngIf="showIntervalConfig" class="config-form">
-        <div class="form-group">
-          <label>Warning Check Interval (Hours)</label>
-          <input type="number" class="form-control" [(ngModel)]="warningIntervalHours" min="1" max="24" step="1">
-          <small class="form-text">System will check for low stock warnings every {{ warningIntervalHours }} hour(s)</small>
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-primary" (click)="saveWarningInterval()">Save</button>
-          <button class="btn btn-secondary" (click)="showIntervalConfig = false">Cancel</button>
-        </div>
-      </div>
-      <div *ngIf="!showIntervalConfig" class="config-display">
-        <p><strong>Current Warning Interval:</strong> {{ warningIntervalHours }} hour(s)</p>
-        <button class="btn btn-sm btn-primary" (click)="checkWarningsNow()" style="margin-top: 10px;">Check Warnings Now</button>
-      </div>
-    </div>
-
-    <!-- Alerts Enable/Disable Toggle -->
-    <div class="config-card" style="margin-top: 20px;">
-      <div class="config-header">
-        <h3>Stock Alerts</h3>
-      </div>
-      <div class="config-display">
-        <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
-          <label style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" [(ngModel)]="alertsEnabled" (change)="toggleAlerts()" style="width: 20px; height: 20px; cursor: pointer;">
-            <span><strong>Enable Stock Alerts</strong></span>
-          </label>
-        </div>
-        <small class="form-text" style="display: block; margin-top: 8px; color: #666;">
-          When enabled, system will show notifications for low stock items. When disabled, no alerts will be displayed.
-        </small>
-      </div>
-    </div>
-  </div>
-
-  <!-- Stock Items Tab -->
-  <div class="tab-content" *ngIf="activeTab === 'items'">
+  <!-- One Stock tab: list + Add / Remove / Edit panel -->
+  <div class="tab-content" *ngIf="activeTab === 'stock'">
     <div class="section-header">
-      <h2>Stock Items</h2>
-      <button class="btn btn-primary" (click)="openStockItemForm()">+ Add Stock Item</button>
+      <h2>Stock</h2>
+      <button *ngIf="isAdmin" class="btn btn-primary" (click)="startNewStockName()">+ Add Stock Name</button>
     </div>
 
-    <!-- Stock Item Form -->
-    <div class="form-card" *ngIf="showStockItemForm">
-      <h3>{{ editingStockItem ? 'Edit Stock Item' : 'New Stock Item' }}</h3>
-      <form [formGroup]="stockItemForm" (ngSubmit)="saveStockItem()">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Name (English) *</label>
-            <input type="text" formControlName="nameEn" class="form-control">
-          </div>
-          <div class="form-group">
-            <label>Name (Urdu)</label>
-            <input type="text" formControlName="nameUr" class="form-control">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Unit *</label>
-            <select formControlName="unit" class="form-control">
-              <option value="piece">Piece</option>
-              <option value="kg">Kilogram</option>
-              <option value="gram">Gram</option>
-              <option value="liter">Liter</option>
-              <option value="ml">Milliliter</option>
-              <option value="packet">Packet</option>
-              <option value="slice">Slice</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Current Quantity *</label>
-            <input type="number" formControlName="currentQuantity" class="form-control" step="0.01" min="0">
-          </div>
-          <div class="form-group">
-            <label>Minimum Threshold *</label>
-            <input type="number" formControlName="minThreshold" class="form-control" step="0.01" min="0">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>
-            <input type="checkbox" formControlName="isActive"> Active
-          </label>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Save</button>
-          <button type="button" class="btn btn-secondary" (click)="resetStockItemForm()">Cancel</button>
-        </div>
-      </form>
+    <p class="quantity-help">
+      Search an item, then use <strong>Add</strong>, <strong>Remove</strong>, or
+      <span *ngIf="isAdmin"><strong>Edit</strong> </span>in the panel below.
+    </p>
+
+    <div class="search-bar">
+      <label for="stockSearch">Search stock</label>
+      <input
+        id="stockSearch"
+        type="search"
+        class="form-control"
+        [(ngModel)]="stockSearchQuery"
+        placeholder="Type partial name (e.g. chee) or barcode…">
     </div>
 
-    <!-- Stock Items List -->
     <div *ngIf="loading" class="loading">Loading stock items...</div>
-    <div class="items-grid" *ngIf="!loading && stockItems.length > 0">
-      <div class="item-card" *ngFor="let item of stockItems" [class.low-stock]="item.isLowStock">
+    <div class="items-grid" *ngIf="!loading && filteredStockItems.length > 0">
+      <div class="item-card" *ngFor="let item of filteredStockItems" [class.low-stock]="item.isLowStock">
         <div class="item-header">
           <h4>{{ item.nameEn }}</h4>
-          <span class="badge" [class.badge-warning]="item.isLowStock" [class.badge-success]="!item.isLowStock">
-            {{ item.isLowStock ? 'Low Stock' : 'In Stock' }}
+          <span class="badge" [class.badge-warning]="item.isLowStock || item.isActive === false" [class.badge-success]="!item.isLowStock && item.isActive !== false">
+            {{ item.isActive === false ? 'Inactive' : (item.isLowStock ? 'Low Stock' : 'In Stock') }}
           </span>
         </div>
         <div class="item-details">
           <p><strong>Unit:</strong> {{ item.unit }}</p>
           <p><strong>Current:</strong> {{ item.currentQuantity }} {{ item.unit }}</p>
           <p><strong>Threshold:</strong> {{ item.minThreshold }} {{ item.unit }}</p>
-          <p *ngIf="item.nameUr"><strong>Name (Urdu):</strong> {{ item.nameUr }}</p>
+          <p *ngIf="isAdmin && item.barcode"><strong>Barcode:</strong> {{ item.barcode }}</p>
+          <p *ngIf="isAdmin && item.scanPackQty"><strong>Per scan:</strong> {{ item.scanPackQty }} {{ item.unit }}</p>
         </div>
         <div class="item-actions">
-          <button class="btn btn-sm btn-primary" (click)="openStockItemForm(item)">Edit</button>
-          <button class="btn btn-sm btn-danger" (click)="deleteStockItem(item.id!)">Delete</button>
+          <button
+            class="btn btn-sm btn-primary"
+            [disabled]="item.isActive === false"
+            (click)="selectStockForQuantity(item, 'add')">
+            Add
+          </button>
+          <button
+            class="btn btn-sm btn-warning"
+            [disabled]="item.isActive === false"
+            (click)="selectStockForQuantity(item, 'remove')">
+            Remove
+          </button>
+          <button *ngIf="isAdmin" class="btn btn-sm btn-secondary" (click)="selectStockForQuantity(item, 'edit')">Edit</button>
+          <button *ngIf="isAdmin" class="btn btn-sm btn-danger" (click)="deleteStockItem(item.id!)">Delete</button>
         </div>
       </div>
     </div>
     <div *ngIf="!loading && stockItems.length === 0" class="no-items">
-      <p>No stock items found. Click "+ Add Stock Item" to create one.</p>
+      <p *ngIf="isAdmin">No stock names yet. Click <strong>+ Add Stock Name</strong> to add Cheese, Burger Bun, Gas, etc.</p>
+      <p *ngIf="!isAdmin">No stock items available. Ask an admin to add stock names first.</p>
     </div>
-  </div>
-
-  <!-- Menu Item Ingredients Tab -->
-  <div class="tab-content" *ngIf="activeTab === 'ingredients'">
-    <div class="section-header">
-      <h2>Menu Item Ingredients</h2>
+    <div *ngIf="!loading && stockItems.length > 0 && filteredStockItems.length === 0" class="no-items">
+      <p>No stock matches “{{ stockSearchQuery }}”.</p>
     </div>
 
-    <!-- Menu Item Selection -->
-    <div class="form-card">
-      <h3>Select Menu Item</h3>
-      <select class="form-control" [(ngModel)]="selectedMenuItem" (change)="selectMenuItem(selectedMenuItem!)">
-        <option [ngValue]="null">-- Select Menu Item --</option>
-        <option *ngFor="let item of menuItems" [ngValue]="item">{{ item.nameEn }}</option>
-      </select>
-    </div>
+    <div class="form-card quantity-card">
+      <div class="mode-toggle">
+        <button
+          type="button"
+          class="mode-btn"
+          [class.active]="quantityMode === 'add'"
+          (click)="setQuantityMode('add')">
+          Add stock
+        </button>
+        <button
+          type="button"
+          class="mode-btn mode-remove"
+          [class.active]="quantityMode === 'remove'"
+          (click)="setQuantityMode('remove')">
+          Remove (expired / damaged)
+        </button>
+        <button
+          *ngIf="isAdmin"
+          type="button"
+          class="mode-btn mode-edit"
+          [class.active]="quantityMode === 'edit'"
+          (click)="setQuantityMode('edit')">
+          Edit stock name
+        </button>
+      </div>
 
-    <!-- Ingredients List -->
-    <div class="form-card" *ngIf="selectedMenuItem">
-      <h3>Ingredients for {{ selectedMenuItem.nameEn }}</h3>
-      
-      <div class="ingredients-list">
-        <div class="ingredient-item" *ngFor="let ing of menuItemIngredients; let i = index">
-          <select class="form-control" [(ngModel)]="ing.stockItemId">
-            <option [value]="0">-- Select Stock Item --</option>
-            <option *ngFor="let stock of availableStockItems" [value]="stock.id">
-              {{ stock.nameEn }} ({{ stock.unit }})
+      <!-- Add mode -->
+      <ng-container *ngIf="quantityMode === 'add'">
+        <p class="quantity-help">
+          Enter how much to <strong>add</strong> (it is added to what is already on hand).
+          Scan a barcode to select the product and add its pack size automatically.
+          <span *ngIf="isAdmin"> Set barcode / pack size in <strong>Edit stock name</strong>.</span>
+        </p>
+
+        <div class="form-group barcode-group">
+          <label>Barcode scanner</label>
+          <input
+            #barcodeInput
+            type="text"
+            class="form-control barcode-input"
+            [(ngModel)]="barcodeBuffer"
+            (keydown.enter)="onBarcodeEnter($event)"
+            placeholder="Click here and scan (or type code + Enter)"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false">
+          <small class="form-text" *ngIf="lastScanMessage">{{ lastScanMessage }}</small>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Stock name *</label>
+            <select
+              class="form-control"
+              [(ngModel)]="selectedQuantityStockId"
+              (ngModelChange)="onQuantityStockSelected()">
+              <option [ngValue]="null">-- Select stock --</option>
+              <option *ngFor="let stock of filteredAvailableStockItems" [ngValue]="stock.id">
+                {{ stock.nameEn }}{{ stock.barcode ? ' [' + stock.barcode + ']' : '' }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantity to add *</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="quantityValue"
+              step="0.01"
+              min="0"
+              [disabled]="!selectedQuantityStock"
+              placeholder="Amount to add">
+          </div>
+        </div>
+
+        <div class="stock-meta" *ngIf="selectedQuantityStock as stock">
+          <span><strong>Unit:</strong> {{ stock.unit }}</span>
+          <span><strong>On hand now:</strong> {{ stock.currentQuantity }} {{ stock.unit }}</span>
+          <span><strong>Warn below:</strong> {{ stock.minThreshold }} {{ stock.unit }}</span>
+          <span *ngIf="quantityValue != null && quantityValue > 0">
+            <strong>After save:</strong>
+            {{ stock.currentQuantity }} + {{ quantityValue }} = {{ previewAfterSave(stock) }} {{ stock.unit }}
+          </span>
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="savingQuantity || !selectedQuantityStock"
+            (click)="saveQuantity()">
+            {{ savingQuantity ? 'Saving…' : 'Add to stock' }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            [disabled]="!quantityValue"
+            (click)="quantityValue = null; focusBarcode()">
+            Clear qty
+          </button>
+        </div>
+      </ng-container>
+
+      <!-- Remove mode -->
+      <ng-container *ngIf="quantityMode === 'remove'">
+        <p class="quantity-help">
+          Enter how much to <strong>remove</strong> for expired, damaged, or other write-off.
+          It is deducted from on-hand quantity (cannot go below zero).
+        </p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Stock name *</label>
+            <select
+              class="form-control"
+              [(ngModel)]="selectedQuantityStockId"
+              (ngModelChange)="onQuantityStockSelected()">
+              <option [ngValue]="null">-- Select stock --</option>
+              <option *ngFor="let stock of filteredAvailableStockItems" [ngValue]="stock.id">
+                {{ stock.nameEn }}{{ stock.barcode ? ' [' + stock.barcode + ']' : '' }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantity to remove *</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="quantityValue"
+              step="0.01"
+              min="0"
+              [disabled]="!selectedQuantityStock"
+              placeholder="Amount to remove">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Reason</label>
+          <select class="form-control" [(ngModel)]="removeReason">
+            <option value="Expired / damaged">Expired / damaged</option>
+            <option value="Spoiled">Spoiled</option>
+            <option value="Wastage">Wastage</option>
+            <option value="Other write-off">Other write-off</option>
+          </select>
+        </div>
+
+        <div class="stock-meta" *ngIf="selectedQuantityStock as stock">
+          <span><strong>Unit:</strong> {{ stock.unit }}</span>
+          <span><strong>On hand now:</strong> {{ stock.currentQuantity }} {{ stock.unit }}</span>
+          <span><strong>Warn below:</strong> {{ stock.minThreshold }} {{ stock.unit }}</span>
+          <span *ngIf="quantityValue != null && quantityValue > 0">
+            <strong>After save:</strong>
+            {{ stock.currentQuantity }} − {{ quantityValue }} = {{ previewAfterSave(stock) }} {{ stock.unit }}
+          </span>
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="button"
+            class="btn btn-warning"
+            [disabled]="savingQuantity || !selectedQuantityStock"
+            (click)="saveQuantity()">
+            {{ savingQuantity ? 'Saving…' : 'Remove from stock' }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            [disabled]="!quantityValue"
+            (click)="quantityValue = null">
+            Clear qty
+          </button>
+        </div>
+      </ng-container>
+
+      <!-- Edit / create stock name (admin) -->
+      <ng-container *ngIf="isAdmin && quantityMode === 'edit'">
+        <p class="quantity-help">
+          {{ editingStockItem ? 'Edit name, unit, threshold, barcode, and pack size for the selected stock.' : 'Create a new stock name (Cheese, Burger Bun, LNG Gas…).' }}
+        </p>
+
+        <div class="form-group" *ngIf="stockItems.length > 0">
+          <label>Load existing stock (optional)</label>
+          <select
+            class="form-control"
+            [(ngModel)]="selectedQuantityStockId"
+            (ngModelChange)="onQuantityStockSelected()">
+            <option [ngValue]="null">-- New stock name --</option>
+            <option *ngFor="let stock of filteredStockItems" [ngValue]="stock.id">
+              {{ stock.nameEn }}
             </option>
           </select>
-          <input type="number" class="form-control" [(ngModel)]="ing.quantityRequired" step="0.01" min="0" placeholder="Quantity">
-          <button class="btn btn-sm btn-danger" (click)="removeIngredient(i)">Remove</button>
+        </div>
+
+        <form [formGroup]="catalogForm" (ngSubmit)="saveCatalogItem()">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Name (English) *</label>
+              <input type="text" formControlName="nameEn" class="form-control" placeholder="e.g. Burger Bun">
+            </div>
+            <div class="form-group">
+              <label>Name (Urdu)</label>
+              <input type="text" formControlName="nameUr" class="form-control">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Unit *</label>
+              <select formControlName="unit" class="form-control">
+                <option value="piece">Piece</option>
+                <option value="kg">Kilogram</option>
+                <option value="gram">Gram</option>
+                <option value="liter">Liter</option>
+                <option value="ml">Milliliter</option>
+                <option value="packet">Packet</option>
+                <option value="slice">Slice</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Minimum Threshold *</label>
+              <input type="number" formControlName="minThreshold" class="form-control" step="0.01" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Barcode (for scanner)</label>
+              <input type="text" formControlName="barcode" class="form-control" placeholder="Scan or type product barcode">
+            </div>
+            <div class="form-group">
+              <label>Qty per scan *</label>
+              <input type="number" formControlName="scanPackQty" class="form-control" step="0.01" min="0.0001"
+                     placeholder="e.g. 1 for 1kg packet">
+              <small class="form-text">Each scan adds this amount when restocking (e.g. 1 kg cheese packet → 1).</small>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" formControlName="isActive"> Active
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              {{ editingStockItem ? 'Save changes' : 'Create stock name' }}
+            </button>
+            <button type="button" class="btn btn-secondary" (click)="resetCatalogForm()">Cancel</button>
+          </div>
+        </form>
+      </ng-container>
+    </div>
+
+    <div class="config-section config-section-bottom" *ngIf="isAdmin">
+      <div class="config-card">
+        <div class="config-header">
+          <h3>Stock Warning Settings</h3>
+          <button class="btn btn-sm btn-primary" (click)="showIntervalConfig = !showIntervalConfig">
+            {{ showIntervalConfig ? 'Cancel' : 'Configure Warning Interval' }}
+          </button>
+        </div>
+        <div *ngIf="showIntervalConfig" class="config-form">
+          <div class="form-group">
+            <label>Warning Check Interval (Hours)</label>
+            <input type="number" class="form-control" [(ngModel)]="warningIntervalHours" min="1" max="24" step="1">
+            <small class="form-text">System will check for low stock warnings every {{ warningIntervalHours }} hour(s)</small>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" (click)="saveWarningInterval()">Save</button>
+            <button class="btn btn-secondary" (click)="showIntervalConfig = false">Cancel</button>
+          </div>
+        </div>
+        <div *ngIf="!showIntervalConfig" class="config-display">
+          <p><strong>Current Warning Interval:</strong> {{ warningIntervalHours }} hour(s)</p>
+          <button class="btn btn-sm btn-primary" (click)="checkWarningsNow()" style="margin-top: 10px;">Check Warnings Now</button>
         </div>
       </div>
 
+      <div class="config-card" style="margin-top: 20px;">
+        <div class="config-header">
+          <h3>Stock Alerts</h3>
+        </div>
+        <div class="config-display">
+          <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+            <label style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" [(ngModel)]="alertsEnabled" (change)="toggleAlerts()" style="width: 20px; height: 20px; cursor: pointer;">
+              <span><strong>Enable Stock Alerts</strong></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Consumption Config (admin) — different job, kept separate -->
+  <div class="tab-content" *ngIf="isAdmin && activeTab === 'consumptions'">
+    <div class="section-header">
+      <h2>Consumption Config</h2>
+    </div>
+
+    <p class="consumption-help">
+      Configure how many menu servings come from <strong>1 unit</strong> of stock
+      (e.g. 1 kg cheese = 10 cheese burgers). Stock is deducted automatically on each sale.
+    </p>
+
+    <div class="form-card">
+      <h3>Select Stock Item</h3>
+      <select
+        class="form-control"
+        [ngModel]="selectedConsumptionStock"
+        (ngModelChange)="selectConsumptionStock($event)">
+        <option [ngValue]="null">-- Select stock (Cheese, Gas, …) --</option>
+        <option *ngFor="let stock of availableStockItems" [ngValue]="stock">
+          {{ stock.nameEn }} ({{ stock.unit }}) — qty {{ stock.currentQuantity }} / min {{ stock.minThreshold }}
+        </option>
+      </select>
+    </div>
+
+    <div class="form-card" *ngIf="selectedConsumptionStock">
+      <h3>Yield rows for {{ selectedConsumptionStock.nameEn }}</h3>
+      <div class="consumption-rows">
+        <div class="consumption-row" *ngFor="let row of consumptionRows; let i = index">
+          <select class="form-control" [(ngModel)]="row.categoryId" (ngModelChange)="onConsumptionCategoryChange(row)">
+            <option [ngValue]="null">All categories</option>
+            <option *ngFor="let cat of getCatalogCategories()" [ngValue]="cat.id">{{ cat.nameEn }}</option>
+          </select>
+          <select class="form-control" [(ngModel)]="row.menuItemId" (ngModelChange)="onConsumptionMenuItemChange(row)">
+            <option [ngValue]="null">-- Menu item --</option>
+            <option *ngFor="let item of getCatalogItemsForCategory(row.categoryId)" [ngValue]="item.id">
+              {{ item.nameEn }}
+            </option>
+          </select>
+          <select class="form-control" [(ngModel)]="row.sizeCode">
+            <option [ngValue]="null">Any / no size</option>
+            <option *ngFor="let size of getSizesForMenuItem(row.menuItemId)" [ngValue]="size.sizeCode">
+              {{ size.sizeNameEn }} ({{ size.sizeCode }})
+            </option>
+          </select>
+          <div class="servings-field">
+            <label>Servings / 1 {{ selectedConsumptionStock.unit }}</label>
+            <input type="number" class="form-control" [(ngModel)]="row.servingsPerUnit" min="0.0001" step="0.1">
+          </div>
+          <div class="preview-line" *ngIf="row.menuItemId && row.servingsPerUnit > 0">
+            1 {{ selectedConsumptionStock.unit }} covers {{ row.servingsPerUnit }}
+            {{ getMenuItemName(row.menuItemId) }}{{ row.sizeCode ? ' (' + row.sizeCode + ')' : '' }}
+            → each uses {{ quantityPerServingPreview(row.servingsPerUnit) }} {{ selectedConsumptionStock.unit }}
+          </div>
+          <button type="button" class="btn btn-sm btn-danger" (click)="removeConsumptionRow(i)">Remove</button>
+        </div>
+      </div>
       <div class="form-actions">
-        <button class="btn btn-primary" (click)="addIngredient()">+ Add Ingredient</button>
-        <button class="btn btn-success" (click)="saveMenuItemIngredients()">Save Ingredients</button>
+        <button type="button" class="btn btn-primary" (click)="addConsumptionRow()">+ Add product</button>
+        <button type="button" class="btn btn-success" [disabled]="savingConsumptions" (click)="saveConsumptionConfig()">
+          {{ savingConsumptions ? 'Saving…' : 'Save Consumption Config' }}
+        </button>
       </div>
     </div>
   </div>
 </div>
-

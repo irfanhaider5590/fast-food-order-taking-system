@@ -24,6 +24,8 @@ public class StockItemResponse {
     private BigDecimal minThreshold;
     private Boolean isActive;
     private Boolean isLowStock;
+    private String barcode;
+    private BigDecimal scanPackQty;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

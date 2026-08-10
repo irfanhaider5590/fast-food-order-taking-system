@@ -24,12 +24,18 @@ public class StockItemRequest {
 
     private String unit;
 
-    @NotNull(message = "Current quantity is required")
+    /** Optional on create (defaults to 0). Quantity updates use /adjust or /quantity. */
     private BigDecimal currentQuantity;
 
     @NotNull(message = "Minimum threshold is required")
     private BigDecimal minThreshold;
 
     private Boolean isActive;
+
+    /** Optional barcode for scanner restock */
+    private String barcode;
+
+    /** Qty added per scan (defaults to 1) */
+    private BigDecimal scanPackQty;
 }
 

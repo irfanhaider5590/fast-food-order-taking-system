@@ -1,0 +1,42 @@
+<div class="notifications-page">
+  <div class="page-header">
+    <h2>All notifications</h2>
+    <div class="page-actions">
+      <button type="button" class="btn btn-secondary" (click)="load()" [disabled]="loading">Refresh</button>
+      <button type="button" class="btn btn-primary" (click)="goUpdateStock()">Update stock</button>
+    </div>
+  </div>
+
+  <p class="page-hint">
+    These are live low-stock alerts. They stay here until quantity goes above the threshold.
+    Dismiss on the bell only hides them from the popup, not from this list.
+  </p>
+
+  @if (loading) {
+    <p class="state">Loading notifications…</p>
+  } @else if (warnings.length === 0) {
+    <div class="empty-card">
+      <h3>You're all caught up</h3>
+      <p>No stock items are at or below threshold right now.</p>
+    </div>
+  } @else {
+    <div class="warning-list">
+      @for (w of warnings; track w.stockItemId) {
+        <article class="warning-card">
+          <div class="warning-top">
+            <h3>{{ w.stockItemNameEn || 'Stock item' }}</h3>
+            <button type="button" class="btn btn-sm btn-outline" (click)="goUpdateStock()">Update qty</button>
+          </div>
+          <p class="msg">{{ w.warningMessageEn }}</p>
+          @if (w.warningMessageUr) {
+            <p class="msg ur">{{ w.warningMessageUr }}</p>
+          }
+          <div class="meta">
+            <span>Qty: {{ w.currentQuantity }}</span>
+            <span>Threshold: {{ w.thresholdQuantity }}</span>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>

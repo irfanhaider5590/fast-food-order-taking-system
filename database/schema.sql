@@ -394,6 +394,8 @@ INSERT INTO brand_config (config_key, config_value, description) VALUES
 ('BRAND_LOCATION', 'Gujranwala, Pakistan', 'Brand location'),
 ('DEFAULT_CURRENCY', 'PKR', 'Default currency'),
 ('TAX_RATE', '0', 'Tax rate (included in price)'),
-('DELIVERY_CHARGE_INCLUDED', 'true', 'Whether delivery charges are included in item prices')
+('DELIVERY_CHARGE_INCLUDED', 'true', 'Whether delivery charges are included in item prices'),
+('STOCK_WARNING_INTERVAL_HOURS', '2', 'Stock warning check interval in hours'),
+('STOCK_ALERTS_ENABLED', 'true', 'Enable/disable stock alerts notifications')
 ON CONFLICT (config_key) DO NOTHING;
 

@@ -57,6 +57,15 @@ public class StockItem {
     @Builder.Default
     private Boolean isActive = true;
 
+    /** Optional barcode for USB/wedge scanners */
+    @Column(length = 100)
+    private String barcode;
+
+    /** Qty added to restock form per scan (e.g. 1 kg per cheese packet) */
+    @Column(name = "scan_pack_qty", nullable = false, precision = 12, scale = 4)
+    @Builder.Default
+    private BigDecimal scanPackQty = BigDecimal.ONE;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

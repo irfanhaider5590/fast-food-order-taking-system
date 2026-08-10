@@ -65,6 +65,7 @@ public class SecurityConfig {
                                .requestMatchers("/api/public/**").hasRole("ADMIN")
                                .requestMatchers("/api/files/upload", "/api/files/delete").authenticated()
                                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                               .requestMatchers("/api/stock/**").hasRole("ADMIN")
                                .requestMatchers("/api/branch-manager/**").hasAnyRole("ADMIN", "BRANCH_MANAGER")
                                .anyRequest().authenticated()
                        )

@@ -22,14 +22,27 @@
         <div class="header-actions">
           <button class="btn btn-secondary" (click)="switchLanguage('en')">EN</button>
           <button class="btn btn-secondary" (click)="switchLanguage('ur')">UR</button>
-          @if (isLoggedIn()) {
+            @if (isLoggedIn()) {
             <button class="btn btn-home" (click)="goHome()">Home</button>
+            @if (isAdminUser()) {
+              <app-notification-bell></app-notification-bell>
+            }
             <button class="btn btn-logout" (click)="logout()">Logout</button>
           }
         </div>
       </div>
     </div>
   </header>
+
+  @if (showBackBar()) {
+    <div class="back-bar">
+      <div class="container">
+        <button type="button" class="btn-back" (click)="goBack()">
+          <span aria-hidden="true">←</span> Back
+        </button>
+      </div>
+    </div>
+  }
 
   <main class="app-main" [class.app-main-pos]="isPosMode()">
     <div class="container" [class.container-fluid-pos]="isPosMode()">

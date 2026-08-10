@@ -1,13 +1,15 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { NotificationComponent } from './shared/components/notification/notification.component';
 import { FooterComponent } from './shared/components/footer/footer.component';
+import { NotificationBellComponent } from './components/notification-bell/notification-bell.component';
 import { SettingsService } from './services/settings.service';
 import { Settings } from './models/settings.models';
 import { LoggerService } from './services/logger.service';
 import { StockService } from './services/stock.service';
+import { StockAlertService } from './services/stock-alert.service';
 import { NotificationService } from './services/notification.service';
 import { StockWarning } from './models/stock.models';
 import { LicenseService } from './services/license.service';
@@ -19,7 +21,14 @@ import { environment } from '../environments/environment';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, TranslateModule, NotificationComponent, FooterComponent],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    TranslateModule,
+    NotificationComponent,
+    FooterComponent,
+    NotificationBellComponent
+  ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
@@ -28,8 +37,9 @@ export class AppComponent implements OnInit, OnDestroy {
   currentLang = 'en';
   brandName: string = 'Fast Food Order System';
   brandLogoUrl: string | null = null;
-  licenseWarningMessage: string | null = null; // Banner warning message
+  licenseWarningMessage: string | null = null;
   posMode = false;
+  currentUrl = '';
   private settingsSubscription?: Subscription;
   private stockWarningSubscription?: Subscription;
   private licenseWarningSubscription?: Subscription;
@@ -41,8 +51,10 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor(
     private translate: TranslateService,
     private router: Router,
+    private location: Location,
     private settingsService: SettingsService,
     private stockService: StockService,
+    private stockAlertService: StockAlertService,
     private notificationService: NotificationService,
     private licenseService: LicenseService,
     private licenseGuard: LicenseGuardService,
@@ -53,10 +65,12 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.currentUrl = this.router.url;
     this.posMode = this.router.url.startsWith('/orders');
     this.routerSubscription = this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe(e => {
+        this.currentUrl = e.urlAfterRedirects;
         this.posMode = e.urlAfterRedirects.startsWith('/orders');
         if (this.isLoggedIn() && !this.brandLogoUrl) {
           this.loadSettings();
@@ -66,15 +80,13 @@ export class AppComponent implements OnInit, OnDestroy {
     this.loadSettings();
     this.startStockWarningCheck();
     this.startLicenseWarningCheck();
-    
-    // Subscribe to license status for banner updates
+
     this.licenseStatusSubscription = this.licenseGuard.licenseStatus$.subscribe(status => {
       if (status) {
         this.processLicenseWarning(status);
       }
     });
-    
-    // Initial check
+
     if (!this.licenseGuard.getCurrentStatus()) {
       this.licenseGuard.checkLicenseStatus();
     } else {
@@ -101,67 +113,46 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   startStockWarningCheck(): void {
-    // Check immediately
-    this.checkStockWarnings();
-    
-    // Then check every 2 hours (7200000 milliseconds)
+    // Quiet background refresh for bell badge; do not toast-spam on a timer
+    this.refreshStockWarningsQuietly();
     this.stockWarningSubscription = interval(7200000).subscribe(() => {
-      this.checkStockWarnings();
+      this.refreshStockWarningsQuietly();
     });
   }
 
-  checkStockWarnings(): void {
+  /**
+   * Load active warnings once; show at most one summary toast per session
+   * (individual items live in the bell / notifications screen).
+   */
+  private refreshStockWarningsQuietly(): void {
     if (!this.isLoggedIn()) {
       return;
     }
-
-    // Check if alerts are enabled before showing notifications
-    this.stockService.getAlertsEnabled().subscribe({
-      next: (config) => {
-        if (!config.alertsEnabled) {
-          this.logger.debug('Stock alerts are disabled, skipping notifications');
-          return;
-        }
-
-        this.stockService.getStockWarnings().subscribe({
-          next: (warnings: StockWarning[]) => {
-            if (warnings.length > 0) {
-              // Show warnings in both English and Urdu
-              warnings.forEach(warning => {
-                this.notificationService.showWarning(
-                  `${warning.warningMessageEn}\n${warning.warningMessageUr}`,
-                  10000 // Show for 10 seconds
-                );
-              });
-              this.lastWarningCheck = new Date();
-            }
-          },
-          error: (err) => {
-            this.logger.error('Error checking stock warnings:', err);
-          }
-        });
-      },
-      error: (err) => {
-        this.logger.error('Error checking alerts enabled status:', err);
-        // If check fails, proceed with showing warnings (default behavior)
-        this.stockService.getStockWarnings().subscribe({
-          next: (warnings: StockWarning[]) => {
-            if (warnings.length > 0) {
-              warnings.forEach(warning => {
-                this.notificationService.showWarning(
-                  `${warning.warningMessageEn}\n${warning.warningMessageUr}`,
-                  10000
-                );
-              });
-              this.lastWarningCheck = new Date();
-            }
-          },
-          error: (err2) => {
-            this.logger.error('Error checking stock warnings:', err2);
-          }
-        });
-      }
+    this.stockAlertService.refreshLiveWarnings().subscribe({
+      next: (warnings) => this.maybeShowWarningSummary(warnings),
+      error: (err) => this.logger.error('Error refreshing live stock alerts:', err)
     });
+  }
+
+  private maybeShowWarningSummary(warnings: StockWarning[]): void {
+    if (!warnings?.length) {
+      return;
+    }
+    this.lastWarningCheck = new Date();
+    const key = 'stockWarningSummaryShown';
+    if (sessionStorage.getItem(key) === '1') {
+      return;
+    }
+    sessionStorage.setItem(key, '1');
+    this.notificationService.showWarning(
+      `You have ${warnings.length} active stock warning(s). Open the bell icon to review.`,
+      6000
+    );
+  }
+
+  /** @deprecated kept name for callers; redirects to quiet refresh */
+  checkStockWarnings(): void {
+    this.refreshStockWarningsQuietly();
   }
 
   startLicenseWarningCheck(): void {
@@ -320,6 +311,23 @@ export class AppComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dashboard']);
   }
 
+  goBack(): void {
+    if (window.history.length > 1) {
+      this.location.back();
+      return;
+    }
+    this.goHome();
+  }
+
+  /** Back bar under header when not on home/login screens */
+  showBackBar(): boolean {
+    if (!this.isLoggedIn() || this.isPosMode()) {
+      return false;
+    }
+    const path = (this.currentUrl || '').split('?')[0];
+    return path !== '/dashboard' && path !== '/' && path !== '/login';
+  }
+
   logout(): void {
     // Clear authentication tokens
     localStorage.removeItem('accessToken');
@@ -332,6 +340,24 @@ export class AppComponent implements OnInit, OnDestroy {
 
   isLoggedIn(): boolean {
     return !!localStorage.getItem('accessToken');
+  }
+
+  isAdminUser(): boolean {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        return false;
+      }
+      const user = JSON.parse(userStr);
+      const role = user?.role || user?.roleName;
+      const roleId = user?.roleId;
+      return role === 'ADMIN' ||
+        role === 'Admin' ||
+        role?.toLowerCase() === 'admin' ||
+        roleId === 1;
+    } catch {
+      return false;
+    }
   }
 
   isPosMode(): boolean {

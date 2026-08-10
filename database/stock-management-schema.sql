@@ -23,23 +23,8 @@ CREATE INDEX IF NOT EXISTS idx_stock_items_threshold ON stock_items(current_quan
 
 COMMENT ON TABLE stock_items IS 'Stores stock items like dough, cheese, chicken, etc.';
 
--- Menu Item Ingredients table (links menu items to stock items)
-CREATE TABLE IF NOT EXISTS menu_item_ingredients (
-    id BIGSERIAL PRIMARY KEY,
-    menu_item_id BIGINT NOT NULL,
-    stock_item_id BIGINT NOT NULL,
-    quantity_required DECIMAL(10, 2) NOT NULL DEFAULT 1.00,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_menu_item_ingredients_menu_item FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,
-    CONSTRAINT fk_menu_item_ingredients_stock_item FOREIGN KEY (stock_item_id) REFERENCES stock_items(id) ON DELETE CASCADE,
-    CONSTRAINT uk_menu_item_ingredient UNIQUE (menu_item_id, stock_item_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_menu_item_ingredients_menu_item ON menu_item_ingredients(menu_item_id);
-CREATE INDEX IF NOT EXISTS idx_menu_item_ingredients_stock_item ON menu_item_ingredients(stock_item_id);
-
-COMMENT ON TABLE menu_item_ingredients IS 'Defines which stock items and quantities are needed for each menu item';
+-- Recipe yield / consumption is configured in stock_item_consumptions (see Flyway V2+).
+-- Legacy menu_item_ingredients was removed in V4.
 
 -- Stock Transactions table (tracks all stock movements)
 CREATE TABLE IF NOT EXISTS stock_transactions (

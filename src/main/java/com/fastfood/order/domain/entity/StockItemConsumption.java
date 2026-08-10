@@ -13,30 +13,37 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "menu_item_ingredients", 
-       uniqueConstraints = @UniqueConstraint(columnNames = {"menu_item_id", "stock_item_id"}))
+@Table(name = "stock_item_consumptions")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class MenuItemIngredient {
+public class StockItemConsumption {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "menu_item_id", nullable = false)
-    private MenuItem menuItem;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "stock_item_id", nullable = false)
     private StockItem stockItem;
 
-    @Column(nullable = false, precision = 10, scale = 2)
-    @Builder.Default
-    private BigDecimal quantityRequired = BigDecimal.ONE;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "menu_item_id", nullable = false)
+    private MenuItem menuItem;
+
+    /** NULL = applies to any / no size */
+    @Column(name = "size_code", length = 10)
+    private String sizeCode;
+
+    /** How many of this product 1 stock unit covers (UI-facing) */
+    @Column(name = "servings_per_unit", nullable = false, precision = 12, scale = 4)
+    private BigDecimal servingsPerUnit;
+
+    /** Stock units consumed per 1 sold product (= 1 / servingsPerUnit) */
+    @Column(name = "quantity_per_serving", nullable = false, precision = 12, scale = 6)
+    private BigDecimal quantityPerServing;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -46,4 +53,3 @@ public class MenuItemIngredient {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 }
-

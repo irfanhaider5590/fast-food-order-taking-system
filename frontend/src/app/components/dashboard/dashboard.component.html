@@ -5,7 +5,7 @@
     </div>
   </div>
 
-  @if (!isLicenseValid) {
+  @if (isLicenseValid === false) {
     <div class="license-warning">
       <div class="warning-card">
         <h2>⚠️ License Expired or Invalid</h2>
@@ -23,7 +23,7 @@
 
   <div class="dashboard-grid">
     <!-- Order Taking and Order Management - Available to all users when license is valid -->
-    @if (isLicenseValid) {
+    @if (isLicenseValid === true) {
       <div class="card dashboard-card" (click)="navigateTo('/orders')">
         <h3>Order Taking</h3>
         <p>Create and manage orders</p>
@@ -35,7 +35,11 @@
     }
     
     <!-- Admin Only Sections - Visible for admin when license is valid -->
-    @if (isAdmin && isLicenseValid) {
+    @if (isAdmin && isLicenseValid === true) {
+      <div class="card dashboard-card" (click)="navigateTo('/stock')">
+        <h3>Stock Management</h3>
+        <p>View stock, add / remove quantity</p>
+      </div>
       <div class="card dashboard-card" (click)="navigateTo('/analytics')">
         <h3>Analytics</h3>
         <p>View sales analytics and reports</p>
@@ -43,10 +47,6 @@
       <div class="card dashboard-card" (click)="navigateTo('/menu')">
         <h3>Menu Management</h3>
         <p>Manage menu items and categories</p>
-      </div>
-      <div class="card dashboard-card" (click)="navigateTo('/stock')">
-        <h3>Stock Management</h3>
-        <p>Manage stock items and ingredients</p>
       </div>
       <div class="card dashboard-card" (click)="navigateTo('/user-management')">
         <h3>User Management</h3>
